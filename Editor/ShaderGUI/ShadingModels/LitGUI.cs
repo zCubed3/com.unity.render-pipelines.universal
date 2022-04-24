@@ -63,6 +63,10 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             public static GUIContent clearCoatSmoothnessText = EditorGUIUtility.TrTextContent("Smoothness",
                 "Specifies the smoothness of the coating." +
                 "\nActs as a multiplier of the clear coat map smoothness value or as a direct smoothness value if no map is specified.");
+
+            // zCubed Additions
+            public static GUIContent brdfText = EditorGUIUtility.TrTextContent("BRDF LUT",
+                "A lookup texture (LUT) for remapping light interaction over a surface.");
         }
 
         public struct LitProperties
@@ -93,10 +97,14 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             public MaterialProperty clearCoatMask;
             public MaterialProperty clearCoatSmoothness;
 
+            // zCubed Additions
+            public MaterialProperty brdfMap;
+
             public LitProperties(MaterialProperty[] properties)
             {
                 // Surface Option Props
                 workflowMode = BaseShaderGUI.FindProperty("_WorkflowMode", properties, false);
+
                 // Surface Input Props
                 metallic = BaseShaderGUI.FindProperty("_Metallic", properties);
                 specColor = BaseShaderGUI.FindProperty("_SpecColor", properties, false);
@@ -110,6 +118,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
                 parallaxScaleProp = BaseShaderGUI.FindProperty("_Parallax", properties, false);
                 occlusionStrength = BaseShaderGUI.FindProperty("_OcclusionStrength", properties, false);
                 occlusionMap = BaseShaderGUI.FindProperty("_OcclusionMap", properties, false);
+
                 // Advanced Props
                 highlights = BaseShaderGUI.FindProperty("_SpecularHighlights", properties, false);
                 reflections = BaseShaderGUI.FindProperty("_EnvironmentReflections", properties, false);
@@ -118,11 +127,19 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
                 clearCoatMap = BaseShaderGUI.FindProperty("_ClearCoatMap", properties, false);
                 clearCoatMask = BaseShaderGUI.FindProperty("_ClearCoatMask", properties, false);
                 clearCoatSmoothness = BaseShaderGUI.FindProperty("_ClearCoatSmoothness", properties, false);
+
+                // zCubed Additions
+                brdfMap = BaseShaderGUI.FindProperty("_BRDFMap", properties);
             }
         }
 
         public static void Inputs(LitProperties properties, MaterialEditor materialEditor, Material material)
         {
+            // zCubed Additions
+            if (BRDFLUTAvailable(material))
+                DoBRDFLUTArea(properties, materialEditor);
+
+            // Unity Defaults
             DoMetallicSpecularArea(properties, materialEditor, material);
             BaseShaderGUI.DrawNormalArea(materialEditor, properties.bumpMapProp, properties.bumpScaleProp);
 
@@ -154,6 +171,19 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             return material.HasProperty("_Parallax")
                 && material.HasProperty("_ParallaxMap");
         }
+
+        // zCubed Additions
+        private static bool BRDFLUTAvailable(Material material)
+        {
+            return material.HasProperty("_BRDFMap");
+        }
+
+        private static void DoBRDFLUTArea(LitProperties properties, MaterialEditor materialEditor)
+        {
+            materialEditor.TexturePropertySingleLine(Styles.brdfText, properties.brdfMap);
+        }
+
+        //------------------
 
         private static void DoHeightmapArea(LitProperties properties, MaterialEditor materialEditor)
         {

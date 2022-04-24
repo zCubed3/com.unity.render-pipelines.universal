@@ -540,6 +540,9 @@ namespace UnityEditor
             if (material.HasProperty("_BumpMap"))
                 CoreUtils.SetKeyword(material, ShaderKeywordStrings._NORMALMAP, material.GetTexture("_BumpMap"));
 
+            if (material.HasProperty("_BRDFMap"))
+                CoreUtils.SetKeyword(material, "BRDF_MAP", material.GetTexture("_BRDFMap") != null);
+
             // Shader specific keyword functions
             shadingModelFunc?.Invoke(material);
             shaderFunc?.Invoke(material);

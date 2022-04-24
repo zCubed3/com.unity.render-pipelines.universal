@@ -41,8 +41,21 @@ half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat,
     half3 normalWS, half3 viewDirectionWS,
     half clearCoatMask, bool specularHighlightsOff)
 {
-    half NdotL = saturate(dot(normalWS, lightDirectionWS));
-    half3 radiance = lightColor * (lightAttenuation * NdotL);
+    // zCubed: I've separated NdotL into 2 parts for BRDF map support!
+    half rawNdotL = dot(normalWS, lightDirectionWS);
+    half NdotL = saturate(rawNdotL);
+    half3 radiance = lightColor;
+
+    // zCubed: I've added a BRDF LUT
+    #if defined(BRDF_MAP)
+    #define BRDF_SAMPLER(b) sampler##b
+
+    half2 brdfCoord = half2(saturate((rawNdotL + 1) * 0.5), saturate(dot(normalWS, viewDirectionWS)));
+    radiance *= lightAttenuation * BRDF_MAP_NAME.Sample(BRDF_SAMPLER(BRDF_MAP_NAME), brdfCoord);
+    
+    #else
+    radiance *= lightAttenuation * NdotL;
+    #endif
 
     half3 brdf = brdfData.diffuse;
 #ifndef _SPECULARHIGHLIGHTS_OFF
@@ -51,7 +64,7 @@ half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat,
         brdf += brdfData.specular * DirectBRDFSpecular(brdfData, normalWS, lightDirectionWS, viewDirectionWS);
 
 #if defined(_CLEARCOAT) || defined(_CLEARCOATMAP)
-        // Clear coat evaluates the specular a second timw and has some common terms with the base specular.
+        // Clear coat evaluates the specular a second time and has some common terms with the base specular.
         // We rely on the compiler to merge these and compute them only once.
         half brdfCoat = kDielectricSpec.r * DirectBRDFSpecular(brdfDataClearCoat, normalWS, lightDirectionWS, viewDirectionWS);
 

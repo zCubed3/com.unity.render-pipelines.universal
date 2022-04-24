@@ -67,6 +67,9 @@ Shader "Universal Render Pipeline/Lit"
         [HideInInspector][NoScaleOffset]unity_Lightmaps("unity_Lightmaps", 2DArray) = "" {}
         [HideInInspector][NoScaleOffset]unity_LightmapsInd("unity_LightmapsInd", 2DArray) = "" {}
         [HideInInspector][NoScaleOffset]unity_ShadowMasks("unity_ShadowMasks", 2DArray) = "" {}
+
+        // zCubed Additions
+        _BRDFMap ("BRDF Map", 2D) = "white" {}
     }
 
     SubShader
@@ -140,6 +143,13 @@ Shader "Universal Render Pipeline/Lit"
             #pragma multi_compile_instancing
             #pragma instancing_options renderinglayer
             #pragma multi_compile _ DOTS_INSTANCING_ON
+
+            //--------------------------------------
+            // zCubed Additions
+            #pragma shader_feature_local_fragment BRDF_MAP
+
+            Texture2D _BRDFMap; SamplerState sampler_BRDFMap;
+            #define BRDF_MAP_NAME _BRDFMap
 
             #pragma vertex LitPassVertex
             #pragma fragment LitPassFragment
