@@ -467,6 +467,10 @@ namespace UnityEngine.Rendering.Universal
 
         // XR
         public static readonly string UseDrawProcedural = "_USE_DRAW_PROCEDURAL";
+        
+        // zCubed Additions
+        public static readonly string _BRDFMAP = "_BRDFMAP";
+        // ----------------
     }
 
     public sealed partial class UniversalRenderPipeline

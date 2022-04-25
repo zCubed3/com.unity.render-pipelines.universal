@@ -17,6 +17,14 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             AlbedoAlpha,
         }
 
+        public enum TexturePackingMode
+        {
+            None,
+            MAES,
+            RMA,
+            MAS
+        }
+
         public static class Styles
         {
             public static GUIContent workflowModeText = EditorGUIUtility.TrTextContent("Workflow Mode",
@@ -67,6 +75,9 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             // zCubed Additions
             public static GUIContent brdfText = EditorGUIUtility.TrTextContent("BRDF LUT",
                 "A lookup texture (LUT) for remapping light interaction over a surface.");
+
+            public static GUIContent packingModeText = EditorGUIUtility.TrTextContent("Packing Mode",
+                "Select a texture packing mode for compressing your material inputs.");
         }
 
         public struct LitProperties
@@ -99,6 +110,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
 
             // zCubed Additions
             public MaterialProperty brdfMap;
+            public MaterialProperty packingMode;
 
             public LitProperties(MaterialProperty[] properties)
             {
@@ -130,6 +142,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
 
                 // zCubed Additions
                 brdfMap = BaseShaderGUI.FindProperty("_BRDFMap", properties);
+                packingMode = BaseShaderGUI.FindProperty("_PackingMode", properties);
             }
         }
 

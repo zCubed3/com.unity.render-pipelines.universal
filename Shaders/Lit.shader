@@ -70,6 +70,8 @@ Shader "Universal Render Pipeline/Lit"
 
         // zCubed Additions
         _BRDFMap ("BRDF Map", 2D) = "white" {}
+        [HideInInspector] _PackingMode("Packing Mode", float) = 0.0
+		_NormalToOcclusion("Normal To Occlusion", Range(0.0, 2.0)) = 1.0
     }
 
     SubShader
@@ -146,10 +148,7 @@ Shader "Universal Render Pipeline/Lit"
 
             //--------------------------------------
             // zCubed Additions
-            #pragma shader_feature_local_fragment BRDF_MAP
-
-            Texture2D _BRDFMap; SamplerState sampler_BRDFMap;
-            #define BRDF_MAP_NAME _BRDFMap
+            #pragma shader_feature_local_fragment _BRDFMAP
 
             #pragma vertex LitPassVertex
             #pragma fragment LitPassFragment

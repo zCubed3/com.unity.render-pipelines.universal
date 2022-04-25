@@ -47,11 +47,9 @@ half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat,
     half3 radiance = lightColor;
 
     // zCubed: I've added a BRDF LUT
-    #if defined(BRDF_MAP)
-    #define BRDF_SAMPLER(b) sampler##b
-
+    #if defined(_BRDFMAP)
     half2 brdfCoord = half2(saturate((rawNdotL + 1) * 0.5), saturate(dot(normalWS, viewDirectionWS)));
-    radiance *= lightAttenuation * BRDF_MAP_NAME.Sample(BRDF_SAMPLER(BRDF_MAP_NAME), brdfCoord);
+    radiance *= lightAttenuation * _BRDFMap.Sample(sampler_BRDFMap, brdfCoord);
     
     #else
     radiance *= lightAttenuation * NdotL;
