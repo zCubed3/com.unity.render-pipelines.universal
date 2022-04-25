@@ -391,17 +391,26 @@ namespace UnityEditor
             }
         }
 
-        public static void DrawNormalArea(MaterialEditor materialEditor, MaterialProperty bumpMap, MaterialProperty bumpMapScale = null)
+        public static void DrawNormalArea(MaterialEditor materialEditor, MaterialProperty bumpMap, MaterialProperty bumpMapScale = null, MaterialProperty bumpToOcclusion = null)
         {
             if (bumpMapScale != null)
             {
                 materialEditor.TexturePropertySingleLine(Styles.normalMapText, bumpMap,
                     bumpMap.textureValue != null ? bumpMapScale : null);
-                if (bumpMapScale.floatValue != 1 &&
-                    UnityEditorInternal.InternalEditorUtility.IsMobilePlatform(
-                        EditorUserBuildSettings.activeBuildTarget))
+
+                if (bumpMapScale.floatValue != 1 && UnityEditorInternal.InternalEditorUtility.IsMobilePlatform(EditorUserBuildSettings.activeBuildTarget))
                     if (materialEditor.HelpBoxWithButton(Styles.bumpScaleNotSupported, Styles.fixNormalNow))
                         bumpMapScale.floatValue = 1;
+
+                // zCubed Additions
+                // zCubed: Putting this here because it's part of the common lit shader
+                if (bumpMap.textureValue != null && bumpToOcclusion != null)
+                {
+                    EditorGUI.indentLevel += 2;
+                    materialEditor.RangeProperty(bumpToOcclusion, "Normal to AO");
+                    EditorGUI.indentLevel -= 2;
+                }
+                // ----------------
             }
             else
             {

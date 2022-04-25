@@ -29,6 +29,11 @@ half _ClearCoatSmoothness;
 half _DetailAlbedoMapScale;
 half _DetailNormalMapScale;
 half _Surface;
+
+// zCubed Additions
+half _BumpToOcclusion;
+// ----------------
+
 CBUFFER_END
 
 // NOTE: Do not ifdef the properties for dots instancing, but ifdef the actual usage.
@@ -50,6 +55,10 @@ UNITY_DOTS_INSTANCING_START(MaterialPropertyMetadata)
     UNITY_DOTS_INSTANCED_PROP(float , _DetailAlbedoMapScale)
     UNITY_DOTS_INSTANCED_PROP(float , _DetailNormalMapScale)
     UNITY_DOTS_INSTANCED_PROP(float , _Surface)
+
+    // zCubed Additions
+    UNITY_DOTS_INSTANCED_PROP(float , _BumpToOcclusion)
+    // ----------------
 UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
 
 #define _BaseColor              UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4 , Metadata_BaseColor)
@@ -225,7 +234,16 @@ inline void InitializeStandardLitSurfaceData(float2 uv, out SurfaceData outSurfa
 
     outSurfaceData.smoothness = specGloss.a;
     outSurfaceData.normalTS = SampleNormal(uv, TEXTURE2D_ARGS(_BumpMap, sampler_BumpMap), _BumpScale);
-    outSurfaceData.occlusion = SampleOcclusion(uv);
+    
+    // URP Default for occlusion
+    //outSurfaceData.occlusion = SampleOcclusion(uv);
+
+    // zCubed: My version of occlusion with "normal -> occlusion"
+    float2 normalABS = abs(outSurfaceData.normalTS.xy * outSurfaceData.normalTS.xy);
+    float normalAO = LerpWhiteTo((1 - (normalABS.x + normalABS.y)) * (outSurfaceData.normalTS.z), _BumpToOcclusion);
+    outSurfaceData.occlusion = SampleOcclusion(uv) * normalAO;
+
+
     outSurfaceData.emission = SampleEmission(uv, _EmissionColor.rgb, TEXTURE2D_ARGS(_EmissionMap, sampler_EmissionMap));
 
 #if defined(_CLEARCOAT) || defined(_CLEARCOATMAP)

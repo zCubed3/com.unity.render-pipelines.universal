@@ -20,7 +20,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
 
         public static void Inputs(BakedLitProperties properties, MaterialEditor materialEditor)
         {
-            BaseShaderGUI.DrawNormalArea(materialEditor, properties.bumpMapProp);
+            BaseShaderGUI.DrawNormalArea(materialEditor, properties.bumpMapProp, null, null);
         }
     }
 }

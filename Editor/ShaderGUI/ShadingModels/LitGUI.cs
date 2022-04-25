@@ -111,6 +111,8 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             // zCubed Additions
             public MaterialProperty brdfMap;
             public MaterialProperty packingMode;
+            public MaterialProperty bumpToOcclusionProp;
+            // ----------------
 
             public LitProperties(MaterialProperty[] properties)
             {
@@ -143,6 +145,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
                 // zCubed Additions
                 brdfMap = BaseShaderGUI.FindProperty("_BRDFMap", properties);
                 packingMode = BaseShaderGUI.FindProperty("_PackingMode", properties);
+                bumpToOcclusionProp = BaseShaderGUI.FindProperty("_BumpToOcclusion", properties);
             }
         }
 
@@ -154,7 +157,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
 
             // Unity Defaults
             DoMetallicSpecularArea(properties, materialEditor, material);
-            BaseShaderGUI.DrawNormalArea(materialEditor, properties.bumpMapProp, properties.bumpScaleProp);
+            BaseShaderGUI.DrawNormalArea(materialEditor, properties.bumpMapProp, properties.bumpScaleProp, properties.bumpToOcclusionProp);
 
             if (HeightmapAvailable(material))
                 DoHeightmapArea(properties, materialEditor);
