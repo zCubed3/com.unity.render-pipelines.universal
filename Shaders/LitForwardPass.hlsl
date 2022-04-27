@@ -216,7 +216,10 @@ half4 LitPassFragment(Varyings input) : SV_Target
     SETUP_DEBUG_TEXTURE_DATA(inputData, input.uv, _BaseMap);
 
     // zCubed Additions
-    surfaceData.emission *= saturate(pow(dot(inputData.normalWS, inputData.viewDirectionWS), _EmissionFalloff * 2));
+    half emissionFade = dot(inputData.normalWS, inputData.viewDirectionWS);
+    emissionFade = pow(saturate(emissionFade), _EmissionFalloff * 2);
+
+    surfaceData.emission *= emissionFade;
     // ----------------
 
 #ifdef _DBUFFER
