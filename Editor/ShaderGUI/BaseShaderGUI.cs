@@ -358,7 +358,7 @@ namespace UnityEditor
             }
         }
 
-        protected virtual void DrawEmissionProperties(Material material, bool keyword)
+        protected virtual void DrawEmissionProperties(Material material, bool keyword, MaterialProperty emissionFalloffProp = null)
         {
             var emissive = true;
 
@@ -382,6 +382,8 @@ namespace UnityEditor
                 var brightness = emissionColorProp.colorValue.maxColorComponent;
                 if (emissionMapProp.textureValue != null && !hadEmissionTexture && brightness <= 0f)
                     emissionColorProp.colorValue = Color.white;
+
+                materialEditor.RangeProperty(emissionFalloffProp, "Falloff");
             }
 
             if (emissive)

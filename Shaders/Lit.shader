@@ -70,8 +70,12 @@ Shader "Universal Render Pipeline/Lit"
 
         // zCubed Additions
         _BRDFMap ("BRDF Map", 2D) = "white" {}
+        
         [HideInInspector] _PackingMode("Packing Mode", float) = 0.0
-		_BumpToOcclusion("Normal To Occlusion", Range(0.0, 2.0)) = 1.0
+		
+        _BumpToOcclusion("Normal To Occlusion", Range(0.0, 2.0)) = 1.0
+
+        _EmissionFalloff("Emission Falloff", Range(0, 10)) = 0.0
     }
 
     SubShader

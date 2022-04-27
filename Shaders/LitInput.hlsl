@@ -32,6 +32,7 @@ half _Surface;
 
 // zCubed Additions
 half _BumpToOcclusion;
+half _EmissionFalloff;
 // ----------------
 
 CBUFFER_END
@@ -58,6 +59,7 @@ UNITY_DOTS_INSTANCING_START(MaterialPropertyMetadata)
 
     // zCubed Additions
     UNITY_DOTS_INSTANCED_PROP(float , _BumpToOcclusion)
+    UNITY_DOTS_INSTANCED_PROP(float , _EmissionFalloff)
     // ----------------
 UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
 
@@ -242,8 +244,7 @@ inline void InitializeStandardLitSurfaceData(float2 uv, out SurfaceData outSurfa
     float2 normalABS = abs(outSurfaceData.normalTS.xy * outSurfaceData.normalTS.xy);
     float normalAO = LerpWhiteTo((1 - (normalABS.x + normalABS.y)) * (outSurfaceData.normalTS.z), _BumpToOcclusion);
     outSurfaceData.occlusion = SampleOcclusion(uv) * normalAO;
-
-
+    
     outSurfaceData.emission = SampleEmission(uv, _EmissionColor.rgb, TEXTURE2D_ARGS(_EmissionMap, sampler_EmissionMap));
 
 #if defined(_CLEARCOAT) || defined(_CLEARCOATMAP)

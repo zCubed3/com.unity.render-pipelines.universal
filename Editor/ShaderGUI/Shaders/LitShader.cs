@@ -47,7 +47,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
         {
             base.DrawSurfaceInputs(material);
             LitGUI.Inputs(litProperties, materialEditor, material);
-            DrawEmissionProperties(material, true);
+            DrawEmissionProperties(material, true, litProperties.emissionFalloffProp);
             DrawTileOffset(materialEditor, baseMapProp);
         }
 

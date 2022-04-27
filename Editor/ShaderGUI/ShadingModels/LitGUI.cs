@@ -78,6 +78,9 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
 
             public static GUIContent packingModeText = EditorGUIUtility.TrTextContent("Packing Mode",
                 "Select a texture packing mode for compressing your material inputs.");
+
+            public static GUIContent emissionFalloffText = EditorGUIUtility.TrTextContent("Emission Falloff",
+                "Fades the emission over the edges of the mesh.");
         }
 
         public struct LitProperties
@@ -112,6 +115,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             public MaterialProperty brdfMap;
             public MaterialProperty packingMode;
             public MaterialProperty bumpToOcclusionProp;
+            public MaterialProperty emissionFalloffProp;
             // ----------------
 
             public LitProperties(MaterialProperty[] properties)
@@ -146,6 +150,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
                 brdfMap = BaseShaderGUI.FindProperty("_BRDFMap", properties);
                 packingMode = BaseShaderGUI.FindProperty("_PackingMode", properties);
                 bumpToOcclusionProp = BaseShaderGUI.FindProperty("_BumpToOcclusion", properties);
+                emissionFalloffProp = BaseShaderGUI.FindProperty("_EmissionFalloff", properties);
             }
         }
 
