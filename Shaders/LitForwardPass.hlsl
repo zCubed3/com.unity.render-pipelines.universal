@@ -217,9 +217,9 @@ half4 LitPassFragment(Varyings input) : SV_Target
 
     // zCubed Additions
     half emissionFade = dot(inputData.normalWS, inputData.viewDirectionWS);
-    emissionFade = pow(saturate(emissionFade), _EmissionFalloff * 2);
+    emissionFade = saturate(_EmissionFalloff) * pow(saturate(emissionFade), _EmissionFalloff * 2);
 
-    surfaceData.emission *= emissionFade;
+    surfaceData.emission *= saturate(emissionFade);
     // ----------------
 
 #ifdef _DBUFFER
