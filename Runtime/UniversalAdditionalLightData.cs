@@ -130,5 +130,14 @@ namespace UnityEngine.Rendering.Universal
             get => m_LightCookieOffset;
             set => m_LightCookieOffset = value;
         }
+
+        // zCubed Additions
+        [Tooltip("Toggles whether or not this light shades as a black light.")]
+        [SerializeField] bool m_BlacklightEnabled = false;
+        public bool blacklightEnabled
+        {
+            get => m_BlacklightEnabled;
+            set => m_BlacklightEnabled = value;
+        }
     }
 }

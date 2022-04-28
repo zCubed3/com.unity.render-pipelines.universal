@@ -20,7 +20,10 @@ namespace UnityEditor.Rendering.Universal
             Emission = 1 << 2,
             Rendering = 1 << 3,
             Shadows = 1 << 4,
-            LightCookie = 1 << 5
+            LightCookie = 1 << 5,
+
+            // zCubed Additions
+            Blacklight = 1 << 6,
         }
 
         static readonly ExpandedState<Expandable, Light> k_ExpandedState = new(~-1, "URP");
@@ -73,7 +76,13 @@ namespace UnityEditor.Rendering.Universal
             CED.FoldoutGroup(Styles.lightCookieHeader,
                 Expandable.LightCookie,
                 k_ExpandedState,
-                DrawLightCookieContent)
+                DrawLightCookieContent),
+            
+            // zCubed Additions
+            CED.FoldoutGroup(Styles.blacklightHeader,
+                Expandable.Blacklight,
+                k_ExpandedState,
+                DrawBlacklightContent)
         );
 
         static Func<int> s_SetGizmosDirty = SetGizmosDirty();
@@ -465,6 +474,12 @@ namespace UnityEditor.Rendering.Universal
                         Experimental.Lightmapping.SetLightDirty((UnityEngine.Light)serializedLight.serializedObject.targetObject);
                 }
             }
+        }
+
+        // zCubed Additions
+        static void DrawBlacklightContent(UniversalRenderPipelineSerializedLight serializedLight, Editor owner)
+        {
+            serializedLight.additionalLightData.blacklightEnabled = EditorGUILayout.Toggle("Enabled", serializedLight.additionalLightData.blacklightEnabled);
         }
     }
 }
