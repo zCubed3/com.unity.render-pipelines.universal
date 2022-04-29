@@ -237,14 +237,17 @@ inline void InitializeStandardLitSurfaceData(float2 uv, out SurfaceData outSurfa
     outSurfaceData.smoothness = specGloss.a;
     outSurfaceData.normalTS = SampleNormal(uv, TEXTURE2D_ARGS(_BumpMap, sampler_BumpMap), _BumpScale);
     
-    // URP Default for occlusion
+    // URP Default
     //outSurfaceData.occlusion = SampleOcclusion(uv);
+    // -----------
 
+    // zCubed Additions
     // zCubed: My version of occlusion with "normal -> occlusion"
     float2 normalABS = abs(outSurfaceData.normalTS.xy * outSurfaceData.normalTS.xy);
-    float normalAO = LerpWhiteTo((1 - (normalABS.x + normalABS.y)) * (outSurfaceData.normalTS.z), _BumpToOcclusion);
+    float normalAO = LerpOneTo((1 - (normalABS.x + normalABS.y)) * (outSurfaceData.normalTS.z), _BumpToOcclusion);
     outSurfaceData.occlusion = SampleOcclusion(uv) * normalAO;
-    
+    // ----------------
+
     outSurfaceData.emission = SampleEmission(uv, _EmissionColor.rgb, TEXTURE2D_ARGS(_EmissionMap, sampler_EmissionMap));
 
 #if defined(_CLEARCOAT) || defined(_CLEARCOATMAP)

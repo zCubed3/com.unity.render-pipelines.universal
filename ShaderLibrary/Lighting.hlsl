@@ -41,17 +41,15 @@ half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat,
     half3 normalWS, half3 viewDirectionWS,
     half clearCoatMask, bool specularHighlightsOff)
 {
-    // zCubed: I've separated NdotL into 2 parts for BRDF map support!
-    half rawNdotL = dot(normalWS, lightDirectionWS);
-    half NdotL = saturate(rawNdotL);
     half3 radiance = lightColor;
 
     // zCubed: I've added a BRDF LUT
     #if defined(_BRDFMAP)
-    half2 brdfCoord = half2(saturate((rawNdotL + 1) * 0.5), saturate(dot(normalWS, viewDirectionWS)));
+    half NdotL = dot(normalWS, lightDirectionWS);
+    half2 brdfCoord = half2(saturate((NdotL + 1) * 0.5), saturate(dot(normalWS, viewDirectionWS)));
     radiance *= lightAttenuation * _BRDFMap.Sample(sampler_BRDFMap, brdfCoord);
-    
     #else
+    half NdotL = saturate(dot(normalWS, lightDirectionWS));
     radiance *= lightAttenuation * NdotL;
     #endif
 
@@ -81,6 +79,14 @@ half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat,
 
     return brdf * radiance;
 }
+
+// zCubed Additions
+// Version that takes an AO factor
+half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat, Light light, half3 normalWS, half3 viewDirectionWS, half clearCoatMask, bool specularHighlightsOff, float occlusion)
+{
+    return LightingPhysicallyBased(brdfData, brdfDataClearCoat, light.color, light.direction, light.distanceAttenuation * light.shadowAttenuation * occlusion, normalWS, viewDirectionWS, clearCoatMask, specularHighlightsOff);
+}
+//
 
 half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat, Light light, half3 normalWS, half3 viewDirectionWS, half clearCoatMask, bool specularHighlightsOff)
 {
@@ -285,16 +291,40 @@ half4 UniversalFragmentPBR(InputData inputData, SurfaceData surfaceData)
 
     LightingData lightingData = CreateLightingData(inputData, surfaceData);
 
+    // URP Default GI
+    /*
     lightingData.giColor = GlobalIllumination(brdfData, brdfDataClearCoat, surfaceData.clearCoatMask,
                                               inputData.bakedGI, aoFactor.indirectAmbientOcclusion, inputData.positionWS,
                                               inputData.normalWS, inputData.viewDirectionWS);
+    */
+
+    // zCubed Additions
+    // zCubed: Replaces the GI factor with another AO factor to help mask out more GI
+    half surfaceOcclusion = surfaceData.occlusion;
+    half comboOcclusion = aoFactor.indirectAmbientOcclusion * surfaceOcclusion;
+    lightingData.giColor = GlobalIllumination(brdfData, brdfDataClearCoat, surfaceData.clearCoatMask,
+                                              inputData.bakedGI, comboOcclusion, inputData.positionWS,
+                                              inputData.normalWS, inputData.viewDirectionWS);
+    // ----------------
 
     if (IsMatchingLightLayer(mainLight.layerMask, meshRenderingLayers))
     {
+        // URP Default
+        /*
         lightingData.mainLightColor = LightingPhysicallyBased(brdfData, brdfDataClearCoat,
                                                               mainLight,
                                                               inputData.normalWS, inputData.viewDirectionWS,
                                                               surfaceData.clearCoatMask, specularHighlightsOff);
+        */
+        // -----------
+        
+        // zCubed Additions
+        // zCubed: By adding an AO factor into the lighting calculation we can provide better corner shading!
+        lightingData.mainLightColor = LightingPhysicallyBased(brdfData, brdfDataClearCoat,
+                                                      mainLight,
+                                                      inputData.normalWS, inputData.viewDirectionWS,
+                                                      surfaceData.clearCoatMask, specularHighlightsOff, surfaceOcclusion);
+        // ----------------
     }
 
     #if defined(_ADDITIONAL_LIGHTS)
@@ -307,9 +337,20 @@ half4 UniversalFragmentPBR(InputData inputData, SurfaceData surfaceData)
 
         if (IsMatchingLightLayer(light.layerMask, meshRenderingLayers))
         {
+            // URP Default
+            /*
             lightingData.additionalLightsColor += LightingPhysicallyBased(brdfData, brdfDataClearCoat, light,
                                                                           inputData.normalWS, inputData.viewDirectionWS,
                                                                           surfaceData.clearCoatMask, specularHighlightsOff);
+            */
+            // -----------
+
+            // zCubed Additions
+            // zCubed: By adding an AO factor into the lighting calculation we can provide better corner shading!
+            lightingData.additionalLightsColor += LightingPhysicallyBased(brdfData, brdfDataClearCoat, light,
+                                                                          inputData.normalWS, inputData.viewDirectionWS,
+                                                                          surfaceData.clearCoatMask, specularHighlightsOff, surfaceOcclusion);
+            // ----------------
         }
     }
     #endif
@@ -319,9 +360,20 @@ half4 UniversalFragmentPBR(InputData inputData, SurfaceData surfaceData)
 
         if (IsMatchingLightLayer(light.layerMask, meshRenderingLayers))
         {
+            // URP Default
+            /*
             lightingData.additionalLightsColor += LightingPhysicallyBased(brdfData, brdfDataClearCoat, light,
                                                                           inputData.normalWS, inputData.viewDirectionWS,
                                                                           surfaceData.clearCoatMask, specularHighlightsOff);
+            */
+            // -----------
+
+            // zCubed Additions
+            // zCubed: By adding an AO factor into the lighting calculation we can provide better corner shading!
+            lightingData.additionalLightsColor += LightingPhysicallyBased(brdfData, brdfDataClearCoat, light,
+                                                                          inputData.normalWS, inputData.viewDirectionWS,
+                                                                          surfaceData.clearCoatMask, specularHighlightsOff, surfaceOcclusion);
+            // ----------------
         }
     LIGHT_LOOP_END
     #endif
