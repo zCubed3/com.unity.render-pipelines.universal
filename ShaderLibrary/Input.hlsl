@@ -70,6 +70,10 @@ struct InputData
     // w = loaded mip level
     float4 mipInfo;
     #endif
+
+    // zCubed Additions
+    half4 occlusionContribution; // For backwards compat this is OneMinus'ed!
+    // ----------------
 };
 
 ///////////////////////////////////////////////////////////////////////////////

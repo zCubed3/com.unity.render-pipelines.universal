@@ -331,6 +331,44 @@ half3 SubtractDirectMainLightFromLightmap(Light mainLight, half3 normalWS, half3
     return min(bakedGI, realtimeShadow);
 }
 
+// zCubed Additions
+// zCubed: Modified GI that takes a half2 for occlusion instead
+half3 GlobalIllumination(BRDFData brdfData, BRDFData brdfDataClearCoat, float clearCoatMask,
+    half3 bakedGI, half2 occlusion, float3 positionWS,
+    half3 normalWS, half3 viewDirectionWS)
+{
+    half3 reflectVector = reflect(-viewDirectionWS, normalWS);
+    half NoV = saturate(dot(normalWS, viewDirectionWS));
+    half fresnelTerm = Pow4(1.0 - NoV);
+
+    half3 indirectDiffuse = bakedGI * occlusion.x;
+    half3 indirectSpecular = GlossyEnvironmentReflection(reflectVector, positionWS, brdfData.perceptualRoughness, 1.0h) * occlusion.y;
+
+    half3 color = EnvironmentBRDF(brdfData, indirectDiffuse, indirectSpecular, fresnelTerm);
+
+    if (IsOnlyAOLightingFeatureEnabled())
+    {
+        color = half3(1,1,1); // "Base white" for AO debug lighting mode
+    }
+
+#if defined(_CLEARCOAT) || defined(_CLEARCOATMAP)
+    half3 coatIndirectSpecular = GlossyEnvironmentReflection(reflectVector, positionWS, brdfDataClearCoat.perceptualRoughness, 1.0h) * occlusion.y;
+    // TODO: "grazing term" causes problems on full roughness
+    half3 coatColor = EnvironmentBRDFClearCoat(brdfDataClearCoat, clearCoatMask, coatIndirectSpecular, fresnelTerm);
+
+    // Blend with base layer using khronos glTF recommended way using NoV
+    // Smooth surface & "ambiguous" lighting
+    // NOTE: fresnelTerm (above) is pow4 instead of pow5, but should be ok as blend weight.
+    half coatFresnel = kDielectricSpec.x + kDielectricSpec.a * fresnelTerm;
+    return (color * (1.0 - coatFresnel * clearCoatMask) + coatColor);
+#else
+    return color;
+#endif
+}
+// ----------------
+
+// URP Default GI
+/*
 half3 GlobalIllumination(BRDFData brdfData, BRDFData brdfDataClearCoat, float clearCoatMask,
     half3 bakedGI, half occlusion, float3 positionWS,
     half3 normalWS, half3 viewDirectionWS)
@@ -363,6 +401,7 @@ half3 GlobalIllumination(BRDFData brdfData, BRDFData brdfDataClearCoat, float cl
     return color * occlusion;
 #endif
 }
+*/
 
 // Backwards compatiblity
 half3 GlobalIllumination(BRDFData brdfData, half3 bakedGI, half occlusion, float3 positionWS, half3 normalWS, half3 viewDirectionWS)

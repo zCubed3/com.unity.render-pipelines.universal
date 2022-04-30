@@ -76,6 +76,8 @@ Shader "Universal Render Pipeline/Lit"
         _BumpToOcclusion("Normal To Occlusion", Range(0.0, 2.0)) = 1.0
 
         _EmissionFalloff("Emission Falloff", Range(0, 10)) = 0.0
+
+        _OcclusionContribution("AO Contribution", Vector) = (1.0, 1.0, 1.0, 1.0)
     }
 
     SubShader

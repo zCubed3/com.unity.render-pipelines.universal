@@ -116,6 +116,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             public MaterialProperty packingMode;
             public MaterialProperty bumpToOcclusionProp;
             public MaterialProperty emissionFalloffProp;
+            public MaterialProperty occlusionContributionProp;
             // ----------------
 
             public LitProperties(MaterialProperty[] properties)
@@ -151,6 +152,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
                 packingMode = BaseShaderGUI.FindProperty("_PackingMode", properties);
                 bumpToOcclusionProp = BaseShaderGUI.FindProperty("_BumpToOcclusion", properties);
                 emissionFalloffProp = BaseShaderGUI.FindProperty("_EmissionFalloff", properties);
+                occlusionContributionProp = BaseShaderGUI.FindProperty("_OcclusionContribution", properties);
             }
         }
 
@@ -171,6 +173,25 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             {
                 materialEditor.TexturePropertySingleLine(Styles.occlusionText, properties.occlusionMap,
                     properties.occlusionMap.textureValue != null ? properties.occlusionStrength : null);
+
+                // zCubed Additions
+                // zCubed: I know I shouldn't do this but I wanted efficiency
+                if (properties.occlusionMap.textureValue)
+                {
+                    EditorGUI.indentLevel += 2;
+
+                    Vector4 contrib = properties.occlusionContributionProp.vectorValue;
+
+                    contrib.x = EditorGUILayout.Slider("Direct Diffuse", contrib.x, 0, 1);
+                    contrib.y = EditorGUILayout.Slider("Direct Specular", contrib.y, 0, 1);
+                    contrib.z = EditorGUILayout.Slider("Indirect Diffuse", contrib.z, 0, 1);
+                    contrib.w = EditorGUILayout.Slider("Indirect Specular", contrib.w, 0, 1);
+
+                    properties.occlusionContributionProp.vectorValue = contrib;
+
+                    EditorGUI.indentLevel -= 2;
+                }
+                // ----------------
             }
 
             // Check that we have all the required properties for clear coat,

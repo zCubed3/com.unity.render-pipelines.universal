@@ -36,6 +36,63 @@ half3 LightingSpecular(half3 lightColor, half3 lightDir, half3 normal, half3 vie
     return lightColor * specularReflection;
 }
 
+// zCubed Additions
+// Modified physically based lighting function that accounts for AO better, the old method is forwarded to this now
+half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat,
+    half3 lightColor, half3 lightDirectionWS, half lightAttenuation,
+    half3 normalWS, half3 viewDirectionWS,
+    half clearCoatMask, bool specularHighlightsOff, half4 occlusionContribution)
+{
+    half3 radiance = lightColor;
+
+    // zCubed: I've added a BRDF LUT
+    #if defined(_BRDFMAP)
+    half NdotL = dot(normalWS, lightDirectionWS);
+    half2 brdfCoord = half2(saturate((NdotL + 1) * 0.5), saturate(dot(normalWS, viewDirectionWS)));
+    radiance *= lightAttenuation * _BRDFMap.Sample(sampler_BRDFMap, brdfCoord) * occlusionContribution.x;
+    #else
+    half NdotL = saturate(dot(normalWS, lightDirectionWS));
+    radiance *= lightAttenuation * NdotL * occlusionContribution.x;
+    #endif
+
+    half3 brdf = brdfData.diffuse;
+#ifndef _SPECULARHIGHLIGHTS_OFF
+    [branch] if (!specularHighlightsOff)
+    {
+        brdf += brdfData.specular * DirectBRDFSpecular(brdfData, normalWS, lightDirectionWS, viewDirectionWS) * occlusionContribution.y;
+
+#if defined(_CLEARCOAT) || defined(_CLEARCOATMAP)
+        // Clear coat evaluates the specular a second time and has some common terms with the base specular.
+        // We rely on the compiler to merge these and compute them only once.
+        half brdfCoat = kDielectricSpec.r * DirectBRDFSpecular(brdfDataClearCoat, normalWS, lightDirectionWS, viewDirectionWS);
+
+            // Mix clear coat and base layer using khronos glTF recommended formula
+            // https://github.com/KhronosGroup/glTF/blob/master/extensions/2.0/Khronos/KHR_materials_clearcoat/README.md
+            // Use NoV for direct too instead of LoH as an optimization (NoV is light invariant).
+            half NoV = saturate(dot(normalWS, viewDirectionWS));
+            // Use slightly simpler fresnelTerm (Pow4 vs Pow5) as a small optimization.
+            // It is matching fresnel used in the GI/Env, so should produce a consistent clear coat blend (env vs. direct)
+            half coatFresnel = kDielectricSpec.x + kDielectricSpec.a * Pow4(1.0 - NoV);
+
+        brdf = brdf * (1.0 - clearCoatMask * coatFresnel) + brdfCoat * clearCoatMask;
+#endif // _CLEARCOAT
+    }
+#endif // _SPECULARHIGHLIGHTS_OFF
+
+    return brdf * radiance;
+}
+
+half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat,
+    half3 lightColor, half3 lightDirectionWS, half lightAttenuation,
+    half3 normalWS, half3 viewDirectionWS,
+    half clearCoatMask, bool specularHighlightsOff)
+{
+    return LightingPhysicallyBased(brdfData, brdfDataClearCoat, lightColor, lightDirectionWS, lightAttenuation, normalWS, viewDirectionWS, clearCoatMask, specularHighlightsOff, half4(1, 1, 1, 1));
+}
+// ---------
+
+// URP Default lighting function
+/*
 half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat,
     half3 lightColor, half3 lightDirectionWS, half lightAttenuation,
     half3 normalWS, half3 viewDirectionWS,
@@ -79,12 +136,19 @@ half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat,
 
     return brdf * radiance;
 }
+*/
 
 // zCubed Additions
-// Version that takes an AO factor
+// Version that takes a float AO factor
 half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat, Light light, half3 normalWS, half3 viewDirectionWS, half clearCoatMask, bool specularHighlightsOff, float occlusion)
 {
-    return LightingPhysicallyBased(brdfData, brdfDataClearCoat, light.color, light.direction, light.distanceAttenuation * light.shadowAttenuation * occlusion, normalWS, viewDirectionWS, clearCoatMask, specularHighlightsOff);
+    return LightingPhysicallyBased(brdfData, brdfDataClearCoat, light.color, light.direction, light.distanceAttenuation * light.shadowAttenuation, normalWS, viewDirectionWS, clearCoatMask, specularHighlightsOff, occlusion);
+}
+
+// Version that takes a half4 AO factor
+half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat, Light light, half3 normalWS, half3 viewDirectionWS, half clearCoatMask, bool specularHighlightsOff, half4 occlusion)
+{
+    return LightingPhysicallyBased(brdfData, brdfDataClearCoat, light.color, light.direction, light.distanceAttenuation * light.shadowAttenuation, normalWS, viewDirectionWS, clearCoatMask, specularHighlightsOff, occlusion);
 }
 //
 
@@ -300,24 +364,31 @@ half4 UniversalFragmentPBR(InputData inputData, SurfaceData surfaceData)
 
     // zCubed Additions
     // zCubed: Replaces the GI factor with another AO factor to help mask out more GI
-    half surfaceOcclusion = surfaceData.occlusion;
-    half comboOcclusion = aoFactor.indirectAmbientOcclusion * surfaceOcclusion;
+    half4 surfaceOcclusion = surfaceData.occlusion;
+    // Instead of multiplying the occlusion by the factor, we lerp to 1 based on the contribution
+    surfaceOcclusion = lerp(surfaceOcclusion, 1, inputData.occlusionContribution);
+
+    half2 comboOcclusion = half2(aoFactor.indirectAmbientOcclusion * surfaceOcclusion.z, surfaceOcclusion.w);
     lightingData.giColor = GlobalIllumination(brdfData, brdfDataClearCoat, surfaceData.clearCoatMask,
                                               inputData.bakedGI, comboOcclusion, inputData.positionWS,
                                               inputData.normalWS, inputData.viewDirectionWS);
     // ----------------
 
+    // Enable this to show the old URP AO contribution
+    //#define USE_URP_DEFAULT_AO
+
     if (IsMatchingLightLayer(mainLight.layerMask, meshRenderingLayers))
     {
         // URP Default
-        /*
+        #if defined(USE_URP_DEFAULT_AO)
         lightingData.mainLightColor = LightingPhysicallyBased(brdfData, brdfDataClearCoat,
                                                               mainLight,
                                                               inputData.normalWS, inputData.viewDirectionWS,
                                                               surfaceData.clearCoatMask, specularHighlightsOff);
-        */
         // -----------
         
+        #else
+
         // zCubed Additions
         // zCubed: By adding an AO factor into the lighting calculation we can provide better corner shading!
         lightingData.mainLightColor = LightingPhysicallyBased(brdfData, brdfDataClearCoat,
@@ -325,6 +396,7 @@ half4 UniversalFragmentPBR(InputData inputData, SurfaceData surfaceData)
                                                       inputData.normalWS, inputData.viewDirectionWS,
                                                       surfaceData.clearCoatMask, specularHighlightsOff, surfaceOcclusion);
         // ----------------
+        #endif
     }
 
     #if defined(_ADDITIONAL_LIGHTS)
@@ -338,12 +410,13 @@ half4 UniversalFragmentPBR(InputData inputData, SurfaceData surfaceData)
         if (IsMatchingLightLayer(light.layerMask, meshRenderingLayers))
         {
             // URP Default
-            /*
+            #if defined(USE_URP_DEFAULT_AO)
             lightingData.additionalLightsColor += LightingPhysicallyBased(brdfData, brdfDataClearCoat, light,
                                                                           inputData.normalWS, inputData.viewDirectionWS,
                                                                           surfaceData.clearCoatMask, specularHighlightsOff);
-            */
             // -----------
+
+            #else
 
             // zCubed Additions
             // zCubed: By adding an AO factor into the lighting calculation we can provide better corner shading!
@@ -351,6 +424,7 @@ half4 UniversalFragmentPBR(InputData inputData, SurfaceData surfaceData)
                                                                           inputData.normalWS, inputData.viewDirectionWS,
                                                                           surfaceData.clearCoatMask, specularHighlightsOff, surfaceOcclusion);
             // ----------------
+            #endif
         }
     }
     #endif
@@ -361,12 +435,13 @@ half4 UniversalFragmentPBR(InputData inputData, SurfaceData surfaceData)
         if (IsMatchingLightLayer(light.layerMask, meshRenderingLayers))
         {
             // URP Default
-            /*
+            #if defined(USE_URP_DEFAULT_AO)
             lightingData.additionalLightsColor += LightingPhysicallyBased(brdfData, brdfDataClearCoat, light,
                                                                           inputData.normalWS, inputData.viewDirectionWS,
                                                                           surfaceData.clearCoatMask, specularHighlightsOff);
-            */
             // -----------
+
+            #else
 
             // zCubed Additions
             // zCubed: By adding an AO factor into the lighting calculation we can provide better corner shading!
@@ -374,6 +449,7 @@ half4 UniversalFragmentPBR(InputData inputData, SurfaceData surfaceData)
                                                                           inputData.normalWS, inputData.viewDirectionWS,
                                                                           surfaceData.clearCoatMask, specularHighlightsOff, surfaceOcclusion);
             // ----------------
+            #endif
         }
     LIGHT_LOOP_END
     #endif

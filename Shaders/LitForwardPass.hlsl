@@ -121,6 +121,10 @@ void InitializeInputData(Varyings input, half3 normalTS, out InputData inputData
     inputData.vertexSH = input.vertexSH;
     #endif
     #endif
+
+    // zCubed Additions
+    inputData.occlusionContribution = 1 - _OcclusionContribution;
+    // ----------------
 }
 
 ///////////////////////////////////////////////////////////////////////////////

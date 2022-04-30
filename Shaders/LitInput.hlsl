@@ -33,6 +33,7 @@ half _Surface;
 // zCubed Additions
 half _BumpToOcclusion;
 half _EmissionFalloff;
+half4 _OcclusionContribution;
 // ----------------
 
 CBUFFER_END
@@ -60,6 +61,7 @@ UNITY_DOTS_INSTANCING_START(MaterialPropertyMetadata)
     // zCubed Additions
     UNITY_DOTS_INSTANCED_PROP(float , _BumpToOcclusion)
     UNITY_DOTS_INSTANCED_PROP(float , _EmissionFalloff)
+    UNITY_DOTS_INSTANCED_PROP(half4 , _OcclusionContribution)
     // ----------------
 UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
 
