@@ -358,7 +358,7 @@ namespace UnityEditor
             }
         }
 
-        protected virtual void DrawEmissionProperties(Material material, bool keyword, MaterialProperty emissionFalloffProp = null)
+        protected virtual void DrawEmissionProperties(Material material, bool keyword, MaterialProperty emissionFalloffProp = null, MaterialProperty emissionMultiplyProp = null)
         {
             var emissive = true;
 
@@ -378,12 +378,32 @@ namespace UnityEditor
             // If texture was assigned and color was black set color to white
             if ((emissionMapProp != null) && (emissionColorProp != null))
             {
-                var hadEmissionTexture = emissionMapProp?.textureValue != null;
-                var brightness = emissionColorProp.colorValue.maxColorComponent;
-                if (emissionMapProp.textureValue != null && !hadEmissionTexture && brightness <= 0f)
-                    emissionColorProp.colorValue = Color.white;
+                using (new EditorGUI.DisabledScope(!emissive))
+                {
+                    var hadEmissionTexture = emissionMapProp?.textureValue != null;
+                    var brightness = emissionColorProp.colorValue.maxColorComponent;
+                    if (emissionMapProp.textureValue != null && !hadEmissionTexture && brightness <= 0f)
+                        emissionColorProp.colorValue = Color.white;
 
-                materialEditor.RangeProperty(emissionFalloffProp, "Falloff");
+                    // zCubed Additions
+                    EditorGUI.indentLevel += 2;
+
+                    if (emissionFalloffProp != null)
+                        materialEditor.RangeProperty(emissionFalloffProp, "Falloff");
+
+                    if (emissionMultiplyProp != null)
+                    {
+                        bool enabled = emissionMultiplyProp.floatValue == 1;
+                        enabled = EditorGUILayout.Toggle("Multiply Albedo", enabled);
+                        emissionMultiplyProp.floatValue = enabled ? 1 : 0;
+
+                        if (material.HasProperty("_EmissionMultiply"))
+                            CoreUtils.SetKeyword(material, ShaderKeywordStrings._ALBEDO_EMISSION_MULTIPLY, enabled);
+                    }
+
+                    EditorGUI.indentLevel -= 2;
+                    // ----------------
+                }
             }
 
             if (emissive)

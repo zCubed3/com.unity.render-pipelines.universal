@@ -290,7 +290,15 @@ LightingData CreateLightingData(InputData inputData, SurfaceData surfaceData)
     LightingData lightingData;
 
     lightingData.giColor = inputData.bakedGI;
+
+// zCubed Additions
+#ifdef _ALBEDO_EMISSION_MULTIPLY
+    lightingData.emissionColor = surfaceData.emission * surfaceData.albedo;
+// ----------------
+#else
     lightingData.emissionColor = surfaceData.emission;
+#endif
+
     lightingData.vertexLightingColor = 0;
     lightingData.mainLightColor = 0;
     lightingData.additionalLightsColor = 0;

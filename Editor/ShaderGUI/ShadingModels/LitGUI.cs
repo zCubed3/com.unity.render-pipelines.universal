@@ -116,6 +116,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             public MaterialProperty packingMode;
             public MaterialProperty bumpToOcclusionProp;
             public MaterialProperty emissionFalloffProp;
+            public MaterialProperty emissionMultiplyProp;
             public MaterialProperty occlusionContributionProp;
             // ----------------
 
@@ -152,6 +153,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
                 packingMode = BaseShaderGUI.FindProperty("_PackingMode", properties);
                 bumpToOcclusionProp = BaseShaderGUI.FindProperty("_BumpToOcclusion", properties);
                 emissionFalloffProp = BaseShaderGUI.FindProperty("_EmissionFalloff", properties);
+                emissionMultiplyProp = BaseShaderGUI.FindProperty("_EmissionMultiply", properties);
                 occlusionContributionProp = BaseShaderGUI.FindProperty("_OcclusionContribution", properties);
             }
         }
