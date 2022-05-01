@@ -58,7 +58,7 @@ namespace UnityEngine.Rendering.Universal.Internal
         static int m_AdditionalShadowParams_SSBO;
         bool m_UseStructuredBuffer;
 
-        const int k_ShadowmapBufferBits = 24;
+        const int k_ShadowmapBufferBits = 32;
         private RenderTargetHandle m_AdditionalLightsShadowmap;
         internal RenderTexture m_AdditionalLightsShadowmapTexture;
 

@@ -25,7 +25,7 @@ namespace UnityEngine.Rendering.Universal.Internal
         }
 
         const int k_MaxCascades = 4;
-        const int k_ShadowmapBufferBits = 16;
+        const int k_ShadowmapBufferBits = 32;
         float m_CascadeBorder;
         float m_MaxShadowDistanceSq;
         int m_ShadowCasterCascadesCount;

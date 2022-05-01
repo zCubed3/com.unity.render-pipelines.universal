@@ -311,7 +311,11 @@ namespace UnityEditor
 
             DrawFloatToggleProperty(Styles.alphaClipText, alphaClipProp);
 
-            if ((alphaClipProp != null) && (alphaCutoffProp != null) && (alphaClipProp.floatValue == 1) || (BlendMode)blendModeProp.floatValue == BlendMode.Glass)
+            bool overrideAlpha = false;
+            if (blendModeProp != null)
+                overrideAlpha = (BlendMode)blendModeProp.floatValue == BlendMode.Glass;
+
+            if ((alphaClipProp != null) && (alphaCutoffProp != null) && (alphaClipProp.floatValue == 1) || overrideAlpha)
                 materialEditor.ShaderProperty(alphaCutoffProp, Styles.alphaClipThresholdText, 1);
 
             DrawFloatToggleProperty(Styles.castShadowText, castShadowsProp);
