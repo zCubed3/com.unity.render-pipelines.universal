@@ -157,10 +157,21 @@ void AlphaDiscard(real alpha, real cutoff, real offset = real(0.0))
     #endif
 }
 
+// zCubed Additions
+// zCubed: Extended OutputAlpha that uses a falloff value
+half OutputAlpha(half outputAlpha, half surfaceType = half(0.0), half falloff = half(1.0))
+{
+    return (surfaceType == 1 ? outputAlpha : half(1.0)) * falloff;
+}
+// ----------------
+
+// URP Default OutputAlpha
+/*
 half OutputAlpha(half outputAlpha, half surfaceType = half(0.0))
 {
     return surfaceType == 1 ? outputAlpha : half(1.0);
 }
+*/
 
 // A word on normalization of normals:
 // For better quality normals should be normalized before and after

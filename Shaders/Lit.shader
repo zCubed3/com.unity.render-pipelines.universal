@@ -157,6 +157,7 @@ Shader "Universal Render Pipeline/Lit"
             // zCubed Additions
             #pragma shader_feature_local_fragment _BRDFMAP
             #pragma shader_feature_local_fragment _ALBEDO_EMISSION_MULTIPLY
+            #pragma shader_feature_local_fragment _ALPHAGLASS_ON
 
             #pragma vertex LitPassVertex
             #pragma fragment LitPassFragment

@@ -17,13 +17,13 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             AlbedoAlpha,
         }
 
-        public enum TexturePackingMode
+        // zCubed Additions
+        public enum TransparencyMode
         {
-            None,
-            MAES,
-            RMA,
-            MAS
+            Normal,
+            Glass
         }
+        // ----------------
 
         public static class Styles
         {
@@ -81,6 +81,9 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
 
             public static GUIContent emissionFalloffText = EditorGUIUtility.TrTextContent("Emission Falloff",
                 "Fades the emission over the edges of the mesh.");
+
+            public static GUIContent blendModeText = EditorGUIUtility.TrTextContent("Blend Mode",
+                "Controls how blending is handled with transparency.");
         }
 
         public struct LitProperties

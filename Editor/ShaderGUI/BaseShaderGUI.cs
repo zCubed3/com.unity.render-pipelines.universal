@@ -38,7 +38,11 @@ namespace UnityEditor
             Alpha,   // Old school alpha-blending mode, fresnel does not affect amount of transparency
             Premultiply, // Physically plausible transparency mode, implemented as alpha pre-multiply
             Additive,
-            Multiply
+            Multiply,
+            
+            // zCubed Additions
+            Glass
+            // ----------------
         }
 
         public enum SmoothnessSource
@@ -307,7 +311,7 @@ namespace UnityEditor
 
             DrawFloatToggleProperty(Styles.alphaClipText, alphaClipProp);
 
-            if ((alphaClipProp != null) && (alphaCutoffProp != null) && (alphaClipProp.floatValue == 1))
+            if ((alphaClipProp != null) && (alphaCutoffProp != null) && (alphaClipProp.floatValue == 1) || (BlendMode)blendModeProp.floatValue == BlendMode.Glass)
                 materialEditor.ShaderProperty(alphaCutoffProp, Styles.alphaClipThresholdText, 1);
 
             DrawFloatToggleProperty(Styles.castShadowText, castShadowsProp);
@@ -637,6 +641,10 @@ namespace UnityEditor
                     material.DisableKeyword(ShaderKeywordStrings._ALPHAPREMULTIPLY_ON);
                     material.DisableKeyword(ShaderKeywordStrings._ALPHAMODULATE_ON);
 
+                    // zCubed Additions
+                    material.DisableKeyword(ShaderKeywordStrings._ALPHAGLASS_ON);
+                    // ----------------
+
                     // Specific Transparent Mode Settings
                     switch (blendMode)
                     {
@@ -662,6 +670,17 @@ namespace UnityEditor
                                 UnityEngine.Rendering.BlendMode.Zero);
                             material.EnableKeyword(ShaderKeywordStrings._ALPHAMODULATE_ON);
                             break;
+                        // zCubed Additions
+                        case BlendMode.Glass:
+                            SetMaterialSrcDstBlendProperties(material,
+                                UnityEngine.Rendering.BlendMode.One,
+                                UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                            material.EnableKeyword(ShaderKeywordStrings._ALPHAGLASS_ON);
+                            break;
+                        default:
+                            Debug.LogError($"Unimplemented blend mode {blendMode}");
+                            break;
+                        // ----------------
                     }
 
                     // General Transparent Material Settings

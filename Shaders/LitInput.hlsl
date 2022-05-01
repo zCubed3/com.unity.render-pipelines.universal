@@ -61,7 +61,7 @@ UNITY_DOTS_INSTANCING_START(MaterialPropertyMetadata)
     // zCubed Additions
     UNITY_DOTS_INSTANCED_PROP(float , _BumpToOcclusion)
     UNITY_DOTS_INSTANCED_PROP(float , _EmissionFalloff)
-    UNITY_DOTS_INSTANCED_PROP(half4 , _OcclusionContribution)
+    UNITY_DOTS_INSTANCED_PROP(float4, _OcclusionContribution)
     // ----------------
 UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
 
@@ -79,6 +79,12 @@ UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
 #define _DetailAlbedoMapScale   UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float  , Metadata_DetailAlbedoMapScale)
 #define _DetailNormalMapScale   UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float  , Metadata_DetailNormalMapScale)
 #define _Surface                UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float  , Metadata_Surface)
+
+// zCubed Additions
+#define _BumpToOcclusion        UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float  , Metadata_BumpToOcclusion)
+#define _EmissionFalloff        UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float  , Metadata_EmissionFalloff)
+#define _OcclusionContribution  UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4 , Metadata_OcclusionContribution)
+// ----------------
 #endif
 
 TEXTURE2D(_ParallaxMap);        SAMPLER(sampler_ParallaxMap);

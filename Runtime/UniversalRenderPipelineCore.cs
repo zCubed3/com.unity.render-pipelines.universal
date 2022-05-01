@@ -471,6 +471,7 @@ namespace UnityEngine.Rendering.Universal
         // zCubed Additions
         public static readonly string _BRDFMAP = "_BRDFMAP";
         public static readonly string _ALBEDO_EMISSION_MULTIPLY = "_ALBEDO_EMISSION_MULTIPLY";
+        public static readonly string _ALPHAGLASS_ON = "_ALPHAGLASS_ON";
         // ----------------
     }
 
