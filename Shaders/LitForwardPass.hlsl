@@ -220,9 +220,12 @@ half4 LitPassFragment(Varyings input) : SV_Target
     SETUP_DEBUG_TEXTURE_DATA(inputData, input.uv, _BaseMap);
 
     // zCubed Additions
-    half NdotV = dot(inputData.normalWS, inputData.viewDirectionWS);
-    half emissionFade = pow(saturate(NdotV), _EmissionFalloff * 2);
-    emissionFade = lerp(1, emissionFade, saturate(_EmissionFalloff));
+    half NdotV = saturate(dot(inputData.normalWS, inputData.viewDirectionWS));
+    half emissionFade = lerp(1, pow(NdotV, _EmissionFalloff * 2), saturate(_EmissionFalloff));
+
+    [branch]
+    if (_EmissionFalloff <= 0.001)
+        emissionFade = 1;
 
     surfaceData.emission *= saturate(emissionFade);
     // ----------------
@@ -232,15 +235,15 @@ half4 LitPassFragment(Varyings input) : SV_Target
 #endif
 
     half4 color = UniversalFragmentPBR(inputData, surfaceData);
-
-    color.rgb = MixFog(color.rgb, inputData.fogCoord);
     
     // zCubed Additions
     #if defined(_ALPHAGLASS_ON)
-    color.a = OutputAlpha(color.a, _Surface, lerp(0, _Cutoff, 1 - saturate(NdotV)));
+    color.a = OutputAlpha(color.a, _Surface, lerp(0, _Cutoff, 1 - NdotV));
     #else
     color.a = OutputAlpha(color.a, _Surface);
     #endif
+
+    color.rgb = MixFog(color.rgb, inputData.fogCoord);
     // ----------------
 
     return color;
