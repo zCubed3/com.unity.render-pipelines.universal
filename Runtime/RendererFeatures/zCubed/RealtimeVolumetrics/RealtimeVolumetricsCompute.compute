@@ -134,6 +134,33 @@ half AngleAttenuation(half3 spotDirection, half3 lightDirection, half2 spotAtten
     return atten * atten;
 }
 
+#define CUBEMAPFACE_POSITIVE_X 0
+#define CUBEMAPFACE_NEGATIVE_X 1
+#define CUBEMAPFACE_POSITIVE_Y 2
+#define CUBEMAPFACE_NEGATIVE_Y 3
+#define CUBEMAPFACE_POSITIVE_Z 4
+#define CUBEMAPFACE_NEGATIVE_Z 5
+
+float CubeMapFaceID(float3 dir)
+{
+    float faceID;
+
+    if (abs(dir.z) >= abs(dir.x) && abs(dir.z) >= abs(dir.y))
+    {
+        faceID = (dir.z < 0.0) ? CUBEMAPFACE_NEGATIVE_Z : CUBEMAPFACE_POSITIVE_Z;
+    }
+    else if (abs(dir.y) >= abs(dir.x))
+    {
+        faceID = (dir.y < 0.0) ? CUBEMAPFACE_NEGATIVE_Y : CUBEMAPFACE_POSITIVE_Y;
+    }
+    else
+    {
+        faceID = (dir.x < 0.0) ? CUBEMAPFACE_NEGATIVE_X : CUBEMAPFACE_POSITIVE_X;
+    }
+
+    return faceID;
+}
+
 // TODO: Optimization
 // TODO: Better shadow filtering
 // TODO: Soft / Hard shadow switching
@@ -200,10 +227,23 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             float4 shadowParams = _AdditionalShadowParams[l];
             int shadowSliceIndex = shadowParams.w;
             
-            float4 shadowPoint = mul(_AdditionalLightsWorldToShadow[shadowSliceIndex], float4(sPoint, 1));
-            shadowPoint.xyz /= shadowPoint.w;
+            float shadow;
+            if (shadowSliceIndex >= 0)
+            {
+                if (shadowParams.z)
+                {
+                    float cubemapFaceId = CubeMapFaceID(-lDir);
+                    shadowSliceIndex += cubemapFaceId;
+                }
+                
+                float4 shadowPoint = mul(_AdditionalLightsWorldToShadow[shadowSliceIndex], float4(sPoint, 1));
+                shadowPoint.xyz /= shadowPoint.w;
+                
+                shadow = _AdditionalShadowmap.SampleCmpLevelZero(sampler_AdditionalShadowmap, shadowPoint.xy, shadowPoint.z);
+            }
+            else
+                shadow = 1;
             
-            float shadow = _AdditionalShadowmap.SampleCmpLevelZero(sampler_AdditionalShadowmap, shadowPoint.xy, shadowPoint.z);
             float LDotV = saturate(dot(lDir, sRay.direction));
             LDotV = 1;
             
