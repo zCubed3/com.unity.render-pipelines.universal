@@ -116,9 +116,9 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
             half3 c7 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + float2(texelSize * 3.0, 0.0)));
             half3 c8 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + float2(texelSize * 4.0, 0.0)));
 
-            half3 color = c0 * 0.01621622 + c1 * 0.05405405 + c2 * 0.12162162 + c3 * 0.19459459
-                        + c4 * 0.22702703
-                        + c5 * 0.19459459 + c6 * 0.12162162 + c7 * 0.05405405 + c8 * 0.01621622;
+            half3 color = c0 * 0.01621622 + c1 * 0.05405405 + c2 * 0.12162162 
+                        + c3 * 0.19459459 + c4 * 0.22702703 + c5 * 0.19459459 
+                        + c6 * 0.12162162 + c7 * 0.05405405 + c8 * 0.01621622;
 
             return EncodeHDR(color);
         }
@@ -167,7 +167,7 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
 
     SubShader
     {
-        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline"}
+        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" }
         LOD 100
         ZTest Always ZWrite Off Cull Off
 

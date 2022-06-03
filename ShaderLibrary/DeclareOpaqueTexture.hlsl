@@ -3,7 +3,9 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
 TEXTURE2D_X(_CameraOpaqueTexture);
+float4 _CameraOpaqueTexture_TexelSize;
 SAMPLER(sampler_CameraOpaqueTexture);
+
 
 float3 SampleSceneColor(float2 uv)
 {

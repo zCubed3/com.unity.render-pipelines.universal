@@ -399,9 +399,18 @@ namespace UnityEngine.Rendering.Universal
         /// Returns a list of render passes scheduled to be executed by this renderer.
         /// <seealso cref="ScriptableRenderPass"/>
         /// </summary>
-        protected List<ScriptableRenderPass> activeRenderPassQueue
+        public List<ScriptableRenderPass> activeRenderPassQueue
         {
             get => m_ActiveRenderPassQueue;
+        }
+
+        /// <summary>
+        /// Returns a list of render passes that have will / have been executed by this renderer.
+        /// <seealso cref="ScriptableRenderPass"/>
+        /// </summary>
+        public List<ScriptableRenderPass> allRenderPassQueue
+        {
+            get => m_AllRenderPassQueue;
         }
 
         /// <summary>
@@ -437,6 +446,10 @@ namespace UnityEngine.Rendering.Universal
         const int k_RenderPassBlockCount = 4;
 
         List<ScriptableRenderPass> m_ActiveRenderPassQueue = new List<ScriptableRenderPass>(32);
+
+        // zCubed Additions
+        List<ScriptableRenderPass> m_AllRenderPassQueue = new List<ScriptableRenderPass>(32);
+
         List<ScriptableRendererFeature> m_RendererFeatures = new List<ScriptableRendererFeature>(10);
         RenderTargetIdentifier m_CameraColorTarget;
         RenderTargetIdentifier m_CameraDepthTarget;
@@ -783,6 +796,10 @@ namespace UnityEngine.Rendering.Universal
         public void EnqueuePass(ScriptableRenderPass pass)
         {
             m_ActiveRenderPassQueue.Add(pass);
+
+            // zCubed Additions
+            m_AllRenderPassQueue.Add(pass);
+
             if (disableNativeRenderPassInFeatures)
                 pass.useNativeRenderPass = false;
         }
@@ -937,6 +954,10 @@ namespace UnityEngine.Rendering.Universal
             foreach (int currIndex in renderBlocks.GetRange(blockIndex))
             {
                 var renderPass = m_ActiveRenderPassQueue[currIndex];
+
+                // zCubed Additions
+                renderPass.SetupRenderer(this);
+
                 ExecuteRenderPass(context, renderPass, ref renderingData);
             }
 
@@ -1403,6 +1424,9 @@ namespace UnityEngine.Rendering.Universal
                     m_IsPipelineExecuting = false;
                 }
                 m_ActiveRenderPassQueue.Clear();
+
+                // zCubed Additions
+                m_AllRenderPassQueue.Clear();
             }
 
             ResetNativeRenderPassFrameData();

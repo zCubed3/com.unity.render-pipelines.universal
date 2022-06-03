@@ -62,7 +62,6 @@ namespace UnityEngine.Rendering.Universal.Internal
         private RenderTargetHandle m_AdditionalLightsShadowmap;
         internal RenderTexture m_AdditionalLightsShadowmapTexture;
 
-
         float m_MaxShadowDistanceSq;
         float m_CascadeBorder;
 
@@ -81,6 +80,12 @@ namespace UnityEngine.Rendering.Universal.Internal
         ShadowResolutionRequest[] m_SortedShadowResolutionRequests = null;
         int[] m_VisibleLightIndexToSortedShadowResolutionRequestsFirstSliceIndex = null;                 // for each visible light, store the index of its first shadow slice in m_SortedShadowResolutionRequests (for quicker access)
         List<RectInt> m_UnusedAtlasSquareAreas = new List<RectInt>();                                    // this list tracks space available in the atlas
+
+        // zCubed Additions
+        public RenderTexture additionalLightsShadowmapTexture { get => m_AdditionalLightsShadowmapTexture; }
+        public Vector4[] additionalLightIndexToShadowParams { get => m_AdditionalLightIndexToShadowParams; }
+        public Matrix4x4[] additionalLightShadowSliceIndexTo_WorldShadowMatrix { get => m_AdditionalLightShadowSliceIndexTo_WorldShadowMatrix; }
+
 
         bool m_CreateEmptyShadowmap;
 

@@ -1,0 +1,223 @@
+#pragma kernel CSMain
+
+//
+// URP Only!
+//
+float4x4 _CameraToWorld;
+float4x4 _WorldToCamera;
+float4x4 _Projection;
+float4x4 _InverseProjection;
+
+struct Ray
+{
+    float3 origin;
+    float3 direction;
+};
+
+Ray RayFromViewpoint(float2 vPoint)
+{
+    Ray ray;
+    
+    ray.origin = mul(_CameraToWorld, float4(0, 0, 0, 1)).xyz;
+
+    ray.direction = mul(_InverseProjection, float4(vPoint, 0, 1)).xyz;
+    ray.direction = mul(_CameraToWorld, float4(ray.direction, 0)).xyz;
+    ray.direction = normalize(ray.direction);
+
+    return ray;
+}
+
+Texture2D<float> _MainShadowmap;
+Texture2D<float> _AdditionalShadowmap;
+
+SamplerComparisonState sampler_MainShadowmap;
+
+SamplerComparisonState sampler_AdditionalShadowmap;
+
+//
+// Constants
+//
+#define PI 3.141592654
+
+//
+// URP Constants
+//
+// Sync these constants with their counterparts!
+#define MAX_SHADOW_CASCADES 4
+#define MAX_VISIBLE_LIGHTS 256
+
+//
+// URP Inputs
+//
+float4x4 _MainLightWorldToShadow[MAX_SHADOW_CASCADES + 1];
+float4 _MainLightPosition;
+half4 _MainLightColor;
+
+half4 _AdditionalLightsCount;
+float4 _AdditionalLightsPosition[MAX_VISIBLE_LIGHTS];
+half4 _AdditionalLightsColor[MAX_VISIBLE_LIGHTS];
+half4 _AdditionalLightsAttenuation[MAX_VISIBLE_LIGHTS];
+half4 _AdditionalLightsSpotDir[MAX_VISIBLE_LIGHTS];
+half4 _AdditionalShadowParams[MAX_VISIBLE_LIGHTS];
+float4x4 _AdditionalLightsWorldToShadow[MAX_VISIBLE_LIGHTS];
+
+//
+// Fog Inputs
+//
+SamplerState linearClampSampler;
+
+Texture2D<float> _SceneDepth;
+SamplerState sampler_SceneDepth;
+
+RWTexture2D<float4> _Result;
+
+int _FogSteps;
+float _FogFar;
+
+//
+// Fog params
+//
+float _Density = 0.2;
+#define _Scattering 0.5
+
+//
+// Fog scattering
+//
+float MieScattering(float lightDotView, float gScattering)
+{
+    float result = 1.0f - gScattering * gScattering;
+    result /= (4.0f * PI * pow(1.0f + gScattering * gScattering - (2.0f * gScattering) * lightDotView, 1.5f));
+    return result;
+}
+
+//
+// URP borrowed functions
+//
+float DistanceAttenuation(float distanceSqr, half2 distanceAttenuation)
+{
+    // We use a shared distance attenuation for additional directional and puctual lights
+    // for directional lights attenuation will be 1
+    float lightAtten = rcp(distanceSqr);
+    float2 distanceAttenuationFloat = float2(distanceAttenuation);
+
+#if SHADER_HINT_NICE_QUALITY
+    // Use the smoothing factor also used in the Unity lightmapper.
+    half factor = half(distanceSqr * distanceAttenuationFloat.x);
+    half smoothFactor = saturate(half(1.0) - factor * factor);
+    smoothFactor = smoothFactor * smoothFactor;
+#else
+    // We need to smoothly fade attenuation to light range. We start fading linearly at 80% of light range
+    // Therefore:
+    // fadeDistance = (0.8 * 0.8 * lightRangeSq)
+    // smoothFactor = (lightRangeSqr - distanceSqr) / (lightRangeSqr - fadeDistance)
+    // We can rewrite that to fit a MAD by doing
+    // distanceSqr * (1.0 / (fadeDistanceSqr - lightRangeSqr)) + (-lightRangeSqr / (fadeDistanceSqr - lightRangeSqr)
+    // distanceSqr *        distanceAttenuation.y            +             distanceAttenuation.z
+    half smoothFactor = half(saturate(distanceSqr * distanceAttenuationFloat.x + distanceAttenuationFloat.y));
+#endif
+
+    return lightAtten * smoothFactor;
+}
+
+half AngleAttenuation(half3 spotDirection, half3 lightDirection, half2 spotAttenuation)
+{
+    // Spot Attenuation with a linear falloff can be defined as
+    // (SdotL - cosOuterAngle) / (cosInnerAngle - cosOuterAngle)
+    // This can be rewritten as
+    // invAngleRange = 1.0 / (cosInnerAngle - cosOuterAngle)
+    // SdotL * invAngleRange + (-cosOuterAngle * invAngleRange)
+    // SdotL * spotAttenuation.x + spotAttenuation.y
+
+    // If we precompute the terms in a MAD instruction
+    half SdotL = dot(spotDirection, lightDirection);
+    half atten = saturate(SdotL * spotAttenuation.x + spotAttenuation.y);
+    return atten * atten;
+}
+
+// TODO: Optimization
+// TODO: Better shadow filtering
+// TODO: Soft / Hard shadow switching
+// TODO: Make MieScattering behave better
+
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    uint width, height;
+    _Result.GetDimensions(width, height);
+    
+    float2 uv = float2((float) id.x / (float) width, (float)id.y / (float)height);
+    float2 coords = (uv - 0.5) * 2.0;
+    
+    Ray sRay = RayFromViewpoint(coords);
+    
+    //
+    // Get the world point
+    //
+    _Projection[1][1] *= -1;
+    
+    float d = _SceneDepth.SampleLevel(sampler_SceneDepth, uv, 0).r;
+    float4 clipPos = float4(coords, d, 1.0);
+    float4 viewPos = mul(_Projection, clipPos); // inverse projection by clip position
+    viewPos /= viewPos.w; // perspective division
+    float3 wPos = mul(_CameraToWorld, viewPos).xyz;
+    
+    float stepPer = 1.0 / _FogSteps;
+    
+    float3 sStart = sRay.origin;
+    float3 sEnd = sStart + sRay.direction * _FogFar;
+    
+    float sOcclude = distance(sStart, wPos);
+    float3 sampled = 0;
+    
+    [loop]
+    for (int i = 0; i < _FogSteps; i++)
+    {
+        float3 sPoint = lerp(sStart, sEnd, i * stepPer);
+
+        if (length(_MainLightColor) > 0.0)
+        {
+            float3 shadowPoint = mul(_MainLightWorldToShadow[0], float4(sPoint, 1)).xyz;
+            float shadow = _MainShadowmap.SampleCmpLevelZero(sampler_MainShadowmap, shadowPoint.xy, shadowPoint.z);
+        
+            float LDotV = dot(normalize(_MainLightPosition.xyz), sRay.direction);
+            float fac = saturate(MieScattering(LDotV, _Scattering)) * shadow;
+                
+            sampled += (fac * _MainLightColor.xyz) * stepPer * _Density;
+        }
+        
+        [loop]
+        for (int l = 0; l < _AdditionalLightsCount.x; l++)
+        {
+            float4 lAtten = _AdditionalLightsAttenuation[l];
+            float4 lSpotDir = _AdditionalLightsSpotDir[l];
+            
+            float3 lVector = _AdditionalLightsPosition[l].xyz - sPoint * _AdditionalLightsPosition[l].w;
+            float dSqr = max(dot(lVector, lVector), 0.0);
+
+            half3 lDir = half3(lVector * rsqrt(dSqr));
+            half attenuation = half(DistanceAttenuation(dSqr, lAtten.xy) * AngleAttenuation(lSpotDir.xyz, lDir, lAtten.zw));
+            
+            float4 shadowParams = _AdditionalShadowParams[l];
+            int shadowSliceIndex = shadowParams.w;
+            
+            float4 shadowPoint = mul(_AdditionalLightsWorldToShadow[shadowSliceIndex], float4(sPoint, 1));
+            shadowPoint.xyz /= shadowPoint.w;
+            
+            float shadow = _AdditionalShadowmap.SampleCmpLevelZero(sampler_AdditionalShadowmap, shadowPoint.xy, shadowPoint.z);
+            float LDotV = saturate(dot(lDir, sRay.direction));
+            LDotV = 1;
+            
+            float fac = saturate(MieScattering(LDotV, _Scattering)) * attenuation * shadow;
+            
+            sampled += _AdditionalLightsColor[l] * fac * stepPer;
+        }
+            
+        // If we cross the the fragment, we've been occluded
+        if (distance(sStart, sPoint) > sOcclude)
+            break;
+    }
+
+    _Result[id.xy] = float4(sampled, 1);
+    //_Result[id.xy] = float4(wPos, 1);
+    //_Result[id.xy] = float4(_AdditionalShadowmap.SampleLevel(linearClampSampler, uv, 0).rrr, 1);
+}

@@ -37,6 +37,13 @@ namespace UnityEngine.Rendering.Universal.Internal
         ShadowSliceData[] m_CascadeSlices;
         Vector4[] m_CascadeSplitDistances;
 
+        // zCubed Additions
+        public RenderTargetHandle mainLightShadowmap { get => m_MainLightShadowmap; }
+        public RenderTexture mainLightShadowmapTexture { get => m_MainLightShadowmapTexture; }
+
+        public Matrix4x4[] mainLightShadowMatrices { get => m_MainLightShadowMatrices; }
+        // ================
+
         bool m_CreateEmptyShadowmap;
 
         ProfilingSampler m_ProfilingSetupSampler = new ProfilingSampler("Setup Main Shadowmap");
