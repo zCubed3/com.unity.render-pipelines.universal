@@ -173,8 +173,14 @@ namespace UnityEngine.Rendering.Universal.Additions
             //
             // Main light
             //
+            bool skipMain = false;
             int mainLightIdx = renderingData.lightData.mainLightIndex;
             if (mainLightIdx >= 0)
+            {
+                skipMain = !renderingData.lightData.visibleLights[mainLightIdx].light.GetUniversalAdditionalLightData().volumetricsEnabled;
+            }
+
+            if (mainLightIdx >= 0 && !skipMain)
             {
                 var lightData = renderingData.lightData.visibleLights[mainLightIdx].light.GetUniversalAdditionalLightData();
 
