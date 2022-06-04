@@ -90,7 +90,7 @@ namespace UnityEngine.Rendering.Universal.Additions
         {
             var additionalCameraData = renderingData.cameraData.camera.GetUniversalAdditionalCameraData();
 
-            if (!additionalCameraData.renderVolumetrics && !renderingData.cameraData.isSceneViewCamera)
+            if (!additionalCameraData.renderVolumetrics)
                 return;
 
             RenderTextureDescriptor desc = renderingData.cameraData.cameraTargetDescriptor;
@@ -116,7 +116,7 @@ namespace UnityEngine.Rendering.Universal.Additions
         {
             var additionalCameraData = renderingData.cameraData.camera.GetUniversalAdditionalCameraData();
 
-            if (!additionalCameraData.renderVolumetrics && !renderingData.cameraData.isSceneViewCamera)
+            if (!additionalCameraData.renderVolumetrics)
                 return;
 
             int kernel = computeShader.FindKernel("CSMain");

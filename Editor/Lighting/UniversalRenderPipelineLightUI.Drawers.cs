@@ -479,6 +479,8 @@ namespace UnityEditor.Rendering.Universal
         // zCubed Additions
         static void DrawVolumetricsContent(UniversalRenderPipelineSerializedLight serializedLight, Editor owner)
         {
+            EditorGUI.BeginChangeCheck();
+
             serializedLight.additionalLightData.volumetricsEnabled = EditorGUILayout.Toggle("Enabled", serializedLight.additionalLightData.volumetricsEnabled);
 
             using (new EditorGUI.DisabledScope(!serializedLight.additionalLightData.volumetricsEnabled))
@@ -492,6 +494,9 @@ namespace UnityEditor.Rendering.Universal
 
                 serializedLight.additionalLightData.volumetricsPower = EditorGUILayout.FloatField("Scattering Power", serializedLight.additionalLightData.volumetricsPower);
             }
+
+            if (EditorGUI.EndChangeCheck())
+                serializedLight.Apply();
         }
     }
 }

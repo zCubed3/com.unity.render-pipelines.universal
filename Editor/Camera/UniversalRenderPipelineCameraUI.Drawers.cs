@@ -112,14 +112,24 @@ namespace UnityEditor.Rendering.Universal
         }
 
         // zCubed Additions
+        public static class VolumetricsStyles
+        {
+            public static GUIContent RenderVolumetrics = new GUIContent("Render Volumetrics", "Should this camera render a volumetrics pass?");
+            public static GUIContent VolumetricsDownsampling = new GUIContent("Downsampling", "How many times should we downsample? (res / 2^D)");
+            public static GUIContent VolumetricsSteps = new GUIContent("Steps", "How many steps are taken from the camera to the far distance?");
+            public static GUIContent VolumetricsFar = new GUIContent("Far", "How far should volumetrics be rendered out in front of the view?");
+            public static GUIContent VolumetricsDensity = new GUIContent("Density", "How dense is the fog? (color * density)");
+            public static GUIContent VolumetricsScattering = new GUIContent("Scattering", "What scattering factor should be used? (changes behavior of looking at lights)");
+        }
+
         static void DrawVolumetricsContent(UniversalRenderPipelineSerializedCamera p, Editor owner)
         {
-            p.camerasAdditionalData[0].renderVolumetrics = EditorGUILayout.Toggle("Enabled", p.camerasAdditionalData[0].renderVolumetrics);
-            p.camerasAdditionalData[0].volumetricsDownsampling = EditorGUILayout.IntField("Downsampling", p.camerasAdditionalData[0].volumetricsDownsampling);
-            p.camerasAdditionalData[0].volumetricsSteps = EditorGUILayout.IntField("Steps", p.camerasAdditionalData[0].volumetricsSteps);
-            p.camerasAdditionalData[0].volumetricsFar = EditorGUILayout.FloatField("Far", p.camerasAdditionalData[0].volumetricsFar);
-            p.camerasAdditionalData[0].volumetricsDensity = EditorGUILayout.FloatField("Density", p.camerasAdditionalData[0].volumetricsDensity);
-            p.camerasAdditionalData[0].volumetricsScattering = EditorGUILayout.Slider("Scattering", p.camerasAdditionalData[0].volumetricsScattering, 0, 1);
+            EditorGUILayout.PropertyField(p.renderVolumetrics, VolumetricsStyles.RenderVolumetrics);
+            EditorGUILayout.PropertyField(p.volumetricsDownsampling, VolumetricsStyles.VolumetricsDownsampling);
+            EditorGUILayout.PropertyField(p.volumetricsSteps, VolumetricsStyles.VolumetricsSteps);
+            EditorGUILayout.PropertyField(p.volumetricsFar, VolumetricsStyles.VolumetricsFar);
+            EditorGUILayout.PropertyField(p.volumetricsDensity, VolumetricsStyles.VolumetricsDensity);
+            EditorGUILayout.PropertyField(p.volumetricsScattering, VolumetricsStyles.VolumetricsScattering);
         }
     }
 }
