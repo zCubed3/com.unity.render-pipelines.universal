@@ -132,12 +132,12 @@ namespace UnityEngine.Rendering.Universal
         }
 
         // zCubed Additions
-        [Tooltip("Toggles whether or not this light shades as a black light.")]
-        [SerializeField] bool m_BlacklightEnabled = false;
-        public bool blacklightEnabled
+        [Tooltip("Toggles whether or not this light is counted into a volumetric pass.")]
+        [SerializeField] bool m_VolumetricsEnabled = false;
+        public bool volumetricsEnabled
         {
-            get => m_BlacklightEnabled;
-            set => m_BlacklightEnabled = value;
+            get => m_VolumetricsEnabled;
+            set => m_VolumetricsEnabled = value;
         }
     }
 }

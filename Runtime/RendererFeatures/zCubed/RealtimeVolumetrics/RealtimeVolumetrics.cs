@@ -7,13 +7,15 @@ namespace UnityEngine.Rendering.Universal.Additions
         [System.Serializable]
         public class Settings
         {
-            public ComputeShader fogShader;
+            public ComputeShader computeShader;
             public Shader blendShader;
 
             [Header("TODO: Integrate into camera!")]
             public float far = 10;
             public float density = 1;
+            public float scattering = 0.5f;
             public int steps = 256;
+            public int tileSize = 32;
 
             public int downsample = 0;
         }
@@ -31,24 +33,13 @@ namespace UnityEngine.Rendering.Universal.Additions
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
-            if (settings.fogShader == null)
-                return;
-
-            if (!fogPass.kernel.HasValue)
-                fogPass.kernel = settings.fogShader.FindKernel("CSMain");
-
-            if (!fogPass.kernel.HasValue)
+            if (settings.computeShader == null || settings.blendShader == null)
                 return;
 
             if (!fogPass.blendMaterial)
                 fogPass.blendMaterial = new Material(settings.blendShader);
 
-            fogPass.computeShader = settings.fogShader;
-            fogPass.downsample = settings.downsample;
-            fogPass.steps = settings.steps;
-            fogPass.far = settings.far;
-            fogPass.density = settings.density;
-
+            fogPass.settings = settings;
             renderer.EnqueuePass(fogPass);
         }
     }

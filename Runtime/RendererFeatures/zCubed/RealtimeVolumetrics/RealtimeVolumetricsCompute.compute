@@ -1,12 +1,20 @@
 #pragma kernel CSMain
 
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+#pragma multi_compile_local _ UNITY_STEREO_INSTANCING_ENABLED
+
 //
 // URP Only!
 //
+CBUFFER_START(VOLUMETRICS_CAMERA_DATA)
+
 float4x4 _CameraToWorld;
 float4x4 _WorldToCamera;
 float4x4 _Projection;
 float4x4 _InverseProjection;
+
+CBUFFER_END
 
 struct Ray
 {
@@ -35,11 +43,6 @@ SamplerComparisonState sampler_MainShadowmap;
 SamplerComparisonState sampler_AdditionalShadowmap;
 
 //
-// Constants
-//
-#define PI 3.141592654
-
-//
 // URP Constants
 //
 // Sync these constants with their counterparts!
@@ -50,14 +53,7 @@ SamplerComparisonState sampler_AdditionalShadowmap;
 // URP Inputs
 //
 float4x4 _MainLightWorldToShadow[MAX_SHADOW_CASCADES + 1];
-float4 _MainLightPosition;
-half4 _MainLightColor;
 
-half4 _AdditionalLightsCount;
-float4 _AdditionalLightsPosition[MAX_VISIBLE_LIGHTS];
-half4 _AdditionalLightsColor[MAX_VISIBLE_LIGHTS];
-half4 _AdditionalLightsAttenuation[MAX_VISIBLE_LIGHTS];
-half4 _AdditionalLightsSpotDir[MAX_VISIBLE_LIGHTS];
 half4 _AdditionalShadowParams[MAX_VISIBLE_LIGHTS];
 float4x4 _AdditionalLightsWorldToShadow[MAX_VISIBLE_LIGHTS];
 
@@ -66,19 +62,34 @@ float4x4 _AdditionalLightsWorldToShadow[MAX_VISIBLE_LIGHTS];
 //
 SamplerState linearClampSampler;
 
-Texture2D<float> _SceneDepth;
+TEXTURE2D_X(_SceneDepth);
 SamplerState sampler_SceneDepth;
 
 RWTexture2D<float4> _Result;
 
-int _FogSteps;
-float _FogFar;
+float _EyeIndex;
+float4 _FogParams; // x = Steps, y = Far, z = Density, w = Scattering
 
 //
-// Fog params
+// Randomness
 //
-float _Density = 0.2;
-#define _Scattering 0.5
+// From: https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
+float Rand(float2 n)
+{
+    return frac(sin(dot(n, float2(12.9898, 4.1414))) * 43758.5453);
+}
+
+float Noise(float2 p)
+{
+    float2 ip = floor(p);
+    float2 u = frac(p);
+    u = u * u * (3.0 - 2.0 * u);
+	
+    float res = lerp(
+		lerp(Rand(ip), Rand(ip + float2(1.0, 0.0)), u.x),
+		lerp(Rand(ip + float2(0.0, 1.0)), Rand(ip + float2(1.0, 1.0)), u.x), u.y);
+    return res * res;
+}
 
 //
 // Fog scattering
@@ -86,7 +97,7 @@ float _Density = 0.2;
 float MieScattering(float lightDotView, float gScattering)
 {
     float result = 1.0f - gScattering * gScattering;
-    result /= (4.0f * PI * pow(1.0f + gScattering * gScattering - (2.0f * gScattering) * lightDotView, 1.5f));
+    result /= (4.0f * PI * pow(abs(1.0f + gScattering * gScattering - (2.0f * gScattering) * lightDotView), 1.5f));
     return result;
 }
 
@@ -134,33 +145,6 @@ half AngleAttenuation(half3 spotDirection, half3 lightDirection, half2 spotAtten
     return atten * atten;
 }
 
-#define CUBEMAPFACE_POSITIVE_X 0
-#define CUBEMAPFACE_NEGATIVE_X 1
-#define CUBEMAPFACE_POSITIVE_Y 2
-#define CUBEMAPFACE_NEGATIVE_Y 3
-#define CUBEMAPFACE_POSITIVE_Z 4
-#define CUBEMAPFACE_NEGATIVE_Z 5
-
-float CubeMapFaceID(float3 dir)
-{
-    float faceID;
-
-    if (abs(dir.z) >= abs(dir.x) && abs(dir.z) >= abs(dir.y))
-    {
-        faceID = (dir.z < 0.0) ? CUBEMAPFACE_NEGATIVE_Z : CUBEMAPFACE_POSITIVE_Z;
-    }
-    else if (abs(dir.y) >= abs(dir.x))
-    {
-        faceID = (dir.y < 0.0) ? CUBEMAPFACE_NEGATIVE_Y : CUBEMAPFACE_POSITIVE_Y;
-    }
-    else
-    {
-        faceID = (dir.x < 0.0) ? CUBEMAPFACE_NEGATIVE_X : CUBEMAPFACE_POSITIVE_X;
-    }
-
-    return faceID;
-}
-
 // TODO: Optimization
 // TODO: Better shadow filtering
 // TODO: Soft / Hard shadow switching
@@ -174,7 +158,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     
     float2 uv = float2((float) id.x / (float) width, (float)id.y / (float)height);
     float2 coords = (uv - 0.5) * 2.0;
-    
+        
     Ray sRay = RayFromViewpoint(coords);
     
     //
@@ -182,24 +166,35 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     //
     _Projection[1][1] *= -1;
     
+#ifdef UNITY_STEREO_INSTANCING_ENABLED
+    float d = _SceneDepth.SampleLevel(sampler_SceneDepth, float3(uv, _EyeIndex), 0).r;
+#else
     float d = _SceneDepth.SampleLevel(sampler_SceneDepth, uv, 0).r;
+#endif
     float4 clipPos = float4(coords, d, 1.0);
     float4 viewPos = mul(_Projection, clipPos); // inverse projection by clip position
     viewPos /= viewPos.w; // perspective division
     float3 wPos = mul(_CameraToWorld, viewPos).xyz;
     
-    float stepPer = 1.0 / _FogSteps;
+    float stepPer = 1.0 / _FogParams.x;
     
     float3 sStart = sRay.origin;
-    float3 sEnd = sStart + sRay.direction * _FogFar;
+    float3 sEnd = sStart + sRay.direction * _FogParams.y;
     
     float sOcclude = distance(sStart, wPos);
     float3 sampled = 0;
     
     [loop]
-    for (int i = 0; i < _FogSteps; i++)
+    for (int i = 0; i < _FogParams.x; i++)
     {
-        float3 sPoint = lerp(sStart, sEnd, i * stepPer);
+        float mix = i * stepPer;
+        mix *= mix;
+        
+        float3 sPoint = lerp(sStart, sEnd, mix);
+
+        // If we cross the the fragment, we've been occluded
+        if (distance(sStart, sPoint) > sOcclude)
+            break;
 
         if (length(_MainLightColor) > 0.0)
         {
@@ -207,9 +202,9 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             float shadow = _MainShadowmap.SampleCmpLevelZero(sampler_MainShadowmap, shadowPoint.xy, shadowPoint.z);
         
             float LDotV = dot(normalize(_MainLightPosition.xyz), sRay.direction);
-            float fac = saturate(MieScattering(LDotV, _Scattering)) * shadow;
+            float fac = saturate(MieScattering(LDotV, _FogParams.w)) * shadow;
                 
-            sampled += (fac * _MainLightColor.xyz) * stepPer * _Density;
+            sampled += (fac * _MainLightColor.xyz) * stepPer * _FogParams.z;
         }
         
         [loop]
@@ -247,17 +242,12 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             float LDotV = saturate(dot(lDir, sRay.direction));
             LDotV = 1;
             
-            float fac = saturate(MieScattering(LDotV, _Scattering)) * attenuation * shadow;
+            float fac = saturate(MieScattering(LDotV, _FogParams.w)) * attenuation * shadow;
             
-            sampled += _AdditionalLightsColor[l] * fac * stepPer;
+            sampled += _AdditionalLightsColor[l].xyz * _FogParams.z * fac * stepPer;
         }
-            
-        // If we cross the the fragment, we've been occluded
-        if (distance(sStart, sPoint) > sOcclude)
-            break;
     }
 
     _Result[id.xy] = float4(sampled, 1);
-    //_Result[id.xy] = float4(wPos, 1);
-    //_Result[id.xy] = float4(_AdditionalShadowmap.SampleLevel(linearClampSampler, uv, 0).rrr, 1);
+    //_Result[id.xy] = float4(sRay.origin, 1);
 }

@@ -70,6 +70,8 @@
 
     #define SLICE_ARRAY_INDEX   unity_StereoEyeIndex
 
+    #define RWTEXTURE2D_X(textureName)                                      RWTexture2DArray<float4> textureName
+
     #define TEXTURE2D_X(textureName)                                        TEXTURE2D_ARRAY(textureName)
     #define TEXTURE2D_X_PARAM(textureName, samplerName)                     TEXTURE2D_ARRAY_PARAM(textureName, samplerName)
     #define TEXTURE2D_X_ARGS(textureName, samplerName)                      TEXTURE2D_ARRAY_ARGS(textureName, samplerName)
@@ -87,6 +89,8 @@
 
 #else
     #define SLICE_ARRAY_INDEX       0
+
+    #define RWTEXTURE2D_X(textureName)                                      RWTexture2D<float4> textureName
 
     #define TEXTURE2D_X(textureName)                                        TEXTURE2D(textureName)
     #define TEXTURE2D_X_PARAM(textureName, samplerName)                     TEXTURE2D_PARAM(textureName, samplerName)

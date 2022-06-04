@@ -23,7 +23,7 @@ namespace UnityEditor.Rendering.Universal
             LightCookie = 1 << 5,
 
             // zCubed Additions
-            Blacklight = 1 << 6,
+            Volumetrics = 1 << 6,
         }
 
         static readonly ExpandedState<Expandable, Light> k_ExpandedState = new(~-1, "URP");
@@ -79,10 +79,10 @@ namespace UnityEditor.Rendering.Universal
                 DrawLightCookieContent),
             
             // zCubed Additions
-            CED.FoldoutGroup(Styles.blacklightHeader,
-                Expandable.Blacklight,
+            CED.FoldoutGroup(Styles.volumetricsHeader,
+                Expandable.Volumetrics,
                 k_ExpandedState,
-                DrawBlacklightContent)
+                DrawVolumetricsContent)
         );
 
         static Func<int> s_SetGizmosDirty = SetGizmosDirty();
@@ -477,9 +477,14 @@ namespace UnityEditor.Rendering.Universal
         }
 
         // zCubed Additions
-        static void DrawBlacklightContent(UniversalRenderPipelineSerializedLight serializedLight, Editor owner)
+        static void DrawVolumetricsContent(UniversalRenderPipelineSerializedLight serializedLight, Editor owner)
         {
-            serializedLight.additionalLightData.blacklightEnabled = EditorGUILayout.Toggle("Enabled", serializedLight.additionalLightData.blacklightEnabled);
+            serializedLight.additionalLightData.volumetricsEnabled = EditorGUILayout.Toggle("Enabled", serializedLight.additionalLightData.volumetricsEnabled);
+
+            using (new EditorGUI.DisabledScope(!serializedLight.additionalLightData.volumetricsEnabled))
+            {
+
+            }
         }
     }
 }

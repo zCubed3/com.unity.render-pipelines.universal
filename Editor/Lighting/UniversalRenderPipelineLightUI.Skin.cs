@@ -63,7 +63,7 @@ namespace UnityEditor.Rendering.Universal
             public static readonly GUIContent LightCookieOffset = EditorGUIUtility.TrTextContent("Cookie Offset", "Controls the offset of the cookie mask currently assigned to the light.");
 
             // zCubed Additions
-            public static readonly GUIContent blacklightHeader = new GUIContent("Blacklight");
+            public static readonly GUIContent volumetricsHeader = new GUIContent("Volumetrics");
         }
     }
 }

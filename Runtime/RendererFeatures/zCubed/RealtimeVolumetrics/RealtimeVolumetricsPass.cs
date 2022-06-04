@@ -4,13 +4,8 @@ namespace UnityEngine.Rendering.Universal.Additions
 {
     public class RealtimeVolumetricsPass : ScriptableRenderPass
     {
-        public int downsample = 0;
-        public int? kernel;
+        public RealtimeVolumetrics.Settings settings;
 
-        public int steps;
-        public float far, density;
-
-        public ComputeShader computeShader;
         public Material blendMaterial;
 
         RenderTargetIdentifier fogIdent;
@@ -19,16 +14,16 @@ namespace UnityEngine.Rendering.Universal.Additions
         MainLightShadowCasterPass mainLightPass;
         AdditionalLightsShadowCasterPass additionalLightPass;
 
-        //
-        // Sync with compute shader
-        //
         const int FOG_TEX_ID = 2000;
-        const int TILE_SIZE = 32;
+
+        //
+        // Properties
+        //
+        ComputeShader computeShader { get => settings.computeShader; }
 
         //
         // Sync with URP values!
         //
-        const int MAX_SHADOW_CASCADES = 4;
         const int MAX_VISIBLE_LIGHTS = 256;
 
         Vector4[] additionalLightsPosition = new Vector4[MAX_VISIBLE_LIGHTS];
@@ -62,14 +57,15 @@ namespace UnityEngine.Rendering.Universal.Additions
         {
             RenderTextureDescriptor desc = renderingData.cameraData.cameraTargetDescriptor;
 
-            int p2 = PowerOf2(downsample);
+            int p2 = PowerOf2(settings.downsample);
 
             desc.width /= p2;
             desc.height /= p2;
-
             desc.enableRandomWrite = true;
+            desc.dimension = TextureDimension.Tex2D;
+            desc.volumeDepth = 0;
 
-            cmd.GetTemporaryRT(FOG_TEX_ID, desc);
+            cmd.GetTemporaryRT(FOG_TEX_ID, desc, FilterMode.Trilinear);
             fogIdent = new RenderTargetIdentifier(FOG_TEX_ID);
 
             fogWidth = desc.width;
@@ -78,31 +74,60 @@ namespace UnityEngine.Rendering.Universal.Additions
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
+            int kernel = computeShader.FindKernel("CSMain");
+
             renderingData.cameraData.camera.GetUniversalAdditionalCameraData();
 
             CommandBuffer cmd = CommandBufferPool.Get("RealtimeComputeVolumetrics");
             cmd.Clear();
 
-            int tilesX = Mathf.CeilToInt((float)fogWidth / TILE_SIZE);
-            int tilesY = Mathf.CeilToInt((float)fogHeight / TILE_SIZE);
+            int tilesX = Mathf.CeilToInt((float)fogWidth / settings.tileSize);
+            int tilesY = Mathf.CeilToInt((float)fogHeight / settings.tileSize);
 
-            cmd.SetComputeTextureParam(computeShader, kernel.Value, "_SceneDepth", renderingData.cameraData.renderer.cameraDepthTarget);
-            cmd.SetComputeTextureParam(computeShader, kernel.Value, "_Result", fogIdent);
+            var xrKeyword = new LocalKeyword(computeShader, "UNITY_STEREO_INSTANCING_ENABLED");
+            cmd.SetComputeFloatParam(computeShader, "_EyeIndex", 0);
 
-            cmd.SetComputeMatrixParam(computeShader, "_CameraToWorld", renderingData.cameraData.camera.cameraToWorldMatrix);
-            cmd.SetComputeMatrixParam(computeShader, "_WorldToCamera", renderingData.cameraData.camera.worldToCameraMatrix);
-            cmd.SetComputeMatrixParam(computeShader, "_Projection", GL.GetGPUProjectionMatrix(renderingData.cameraData.camera.projectionMatrix, true).inverse);
-            cmd.SetComputeMatrixParam(computeShader, "_InverseProjection", renderingData.cameraData.camera.projectionMatrix.inverse);
+            bool isXr = renderingData.cameraData.xrRendering;
+
+            if (isXr)
+            {
+                cmd.EnableKeyword(computeShader, xrKeyword);
+            }
+            else
+            {
+                cmd.DisableKeyword(computeShader, xrKeyword);
+            }
+
+            cmd.SetComputeTextureParam(computeShader, kernel, "_SceneDepth", renderingData.cameraData.renderer.cameraDepthTarget);
+            cmd.SetComputeTextureParam(computeShader, kernel, "_Result", fogIdent);
+
+            if (!isXr)
+            {
+                cmd.SetComputeMatrixParam(computeShader, "_CameraToWorld", renderingData.cameraData.camera.cameraToWorldMatrix);
+                cmd.SetComputeMatrixParam(computeShader, "_WorldToCamera", renderingData.cameraData.camera.worldToCameraMatrix);
+                cmd.SetComputeMatrixParam(computeShader, "_Projection", GL.GetGPUProjectionMatrix(renderingData.cameraData.camera.projectionMatrix, true).inverse);
+                cmd.SetComputeMatrixParam(computeShader, "_InverseProjection", renderingData.cameraData.camera.projectionMatrix.inverse);
+            }
+            else
+            {
+                var viewMatrix = renderingData.cameraData.camera.GetStereoViewMatrix(Camera.StereoscopicEye.Left);
+                var projMatrix = renderingData.cameraData.camera.GetStereoProjectionMatrix(Camera.StereoscopicEye.Left);
+
+                cmd.SetComputeMatrixParam(computeShader, "_CameraToWorld", viewMatrix.inverse);
+                cmd.SetComputeMatrixParam(computeShader, "_WorldToCamera", viewMatrix);
+                cmd.SetComputeMatrixParam(computeShader, "_Projection", GL.GetGPUProjectionMatrix(projMatrix, true).inverse);
+                cmd.SetComputeMatrixParam(computeShader, "_InverseProjection", projMatrix.inverse);
+            }
 
             if (mainLightPass != null)
             {
-                cmd.SetComputeTextureParam(computeShader, kernel.Value, "_MainShadowmap", new RenderTargetIdentifier(mainLightPass.mainLightShadowmapTexture));
+                cmd.SetComputeTextureParam(computeShader, kernel, "_MainShadowmap", new RenderTargetIdentifier(mainLightPass.mainLightShadowmapTexture));
                 cmd.SetComputeMatrixArrayParam(computeShader, "_MainLightWorldToShadow", mainLightPass.mainLightShadowMatrices);
             }
 
             if (additionalLightPass != null)
             {
-                cmd.SetComputeTextureParam(computeShader, kernel.Value, "_AdditionalShadowmap", new RenderTargetIdentifier(additionalLightPass.additionalLightsShadowmapTexture));
+                cmd.SetComputeTextureParam(computeShader, kernel, "_AdditionalShadowmap", new RenderTargetIdentifier(additionalLightPass.additionalLightsShadowmapTexture));
             }
 
             //
@@ -159,15 +184,39 @@ namespace UnityEngine.Rendering.Universal.Additions
             cmd.SetComputeVectorArrayParam(computeShader, "_AdditionalShadowParams", additionalLightPass.additionalLightIndexToShadowParams);
             cmd.SetComputeMatrixArrayParam(computeShader, "_AdditionalLightsWorldToShadow", additionalLightPass.additionalLightShadowSliceIndexTo_WorldShadowMatrix);
 
-            cmd.SetComputeIntParam(computeShader, "_FogSteps", steps);
-            cmd.SetComputeFloatParam(computeShader, "_FogFar", far);
-            cmd.SetComputeFloatParam(computeShader, "_Density", density);
+            cmd.SetComputeVectorParam(computeShader, "_FogParams", new Vector4(settings.steps, settings.far, settings.density, settings.scattering));
 
             //
             // Presentation
             //
-            cmd.DispatchCompute(computeShader, kernel.Value, tilesX, tilesY, 1);
-            cmd.Blit(fogIdent, renderingData.cameraData.renderer.cameraColorTarget, blendMaterial);
+
+            // If we're doing XR rendering we need to dispatch twice and blit twice
+            cmd.DispatchCompute(computeShader, kernel, tilesX, tilesY, 1);
+
+            // Blit alternative for XR
+            cmd.SetGlobalFloat("_EyeIndex", 0);
+            cmd.SetGlobalTexture("_MainTex", fogIdent);
+            cmd.SetRenderTarget(new RenderTargetIdentifier(renderingData.cameraData.renderer.cameraColorTarget, 0, CubemapFace.Unknown, -1));
+            cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, blendMaterial);
+            
+            if (isXr)
+            {
+                var viewMatrix = renderingData.cameraData.camera.GetStereoViewMatrix(Camera.StereoscopicEye.Right);
+                var projMatrix = renderingData.cameraData.camera.GetStereoProjectionMatrix(Camera.StereoscopicEye.Right);
+
+                cmd.SetComputeMatrixParam(computeShader, "_CameraToWorld", viewMatrix.inverse);
+                cmd.SetComputeMatrixParam(computeShader, "_WorldToCamera", viewMatrix);
+                cmd.SetComputeMatrixParam(computeShader, "_Projection", GL.GetGPUProjectionMatrix(projMatrix, true).inverse);
+                cmd.SetComputeMatrixParam(computeShader, "_InverseProjection", projMatrix.inverse);
+
+                cmd.SetComputeFloatParam(computeShader, "_EyeIndex", 1);
+                cmd.DispatchCompute(computeShader, kernel, tilesX, tilesY, 1);
+
+                cmd.SetGlobalFloat("_EyeIndex", 1);
+                cmd.SetGlobalTexture("_MainTex", fogIdent);
+                cmd.SetRenderTarget(new RenderTargetIdentifier(renderingData.cameraData.renderer.cameraColorTarget, 0, CubemapFace.Unknown, -1));
+                cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, blendMaterial);
+            }
 
             context.ExecuteCommandBuffer(cmd);
 

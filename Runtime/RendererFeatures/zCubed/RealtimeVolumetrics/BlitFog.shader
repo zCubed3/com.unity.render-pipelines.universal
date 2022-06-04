@@ -12,11 +12,11 @@ Shader "zCubed/Experiments/BlitFog"
 
         Pass
         {
-            CGPROGRAM
+            HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
 
-            #include "UnityCG.cginc"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             struct appdata
             {
@@ -28,8 +28,8 @@ Shader "zCubed/Experiments/BlitFog"
 
             struct v2f
             {
-                float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
+                float2 uv : TEXCOORD0;
 
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -39,35 +39,37 @@ Shader "zCubed/Experiments/BlitFog"
                 v2f o;
 
                 UNITY_SETUP_INSTANCE_ID(v);
-				UNITY_INITIALIZE_OUTPUT(v2f, o);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-                o.vertex = UnityObjectToClipPos(v.vertex);
+                o.vertex = float4(v.vertex.xyz, 1);
                 o.uv = v.uv;
+
+                #if UNITY_UV_STARTS_AT_TOP
+                o.vertex.y *= -1;
+                #endif
 
                 return o;
             }
 
-            UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
-            half4 _MainTex_ST;
+            Texture2D _MainTex;
+            SAMPLER(sampler_MainTex);
 
-            UNITY_DECLARE_SCREENSPACE_TEXTURE(_FogTex);
-            half4 _FogTex_TexelSize;
+            float _EyeIndex;
 
-            float4x4 _InverseView;
-
-            #define PI 3.141592654
-            #define G_SCATTERING 0.00001
-
-            float mod(float x, float y) {
-                return x - y * floor(x/y);
-            }
-
-            fixed4 frag(v2f i) : SV_Target
+            half4 frag(v2f i) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 
-                fixed3 fog = (0).rrr;
+                half3 fog = (0).rrr;
+
+                float2 uv = i.uv;
+
+                #ifdef UNITY_STEREO_INSTANCING_ENABLED
+                //uv = UnityStereoTransformScreenSpaceTex(uv);
+
+                if (_EyeIndex != unity_StereoEyeIndex)
+                    return 0;
+                #endif
 
                 #define MULTISAMPLE
 
@@ -81,29 +83,29 @@ Shader "zCubed/Experiments/BlitFog"
                     0.0625, 0.1, 0.0625
                 );
 
-                fixed3 l00 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv + OFFSET.xx).rgb;
-                fixed3 l01 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv + OFFSET.yx).rgb;
-                fixed3 l02 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv + OFFSET.zx).rgb;
+                half3 l00 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.xx).rgb;
+                half3 l01 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.yx).rgb;
+                half3 l02 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.zx).rgb;
 
-                fixed3 l10 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv + OFFSET.xy).rgb;
-                fixed3 l11 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv + OFFSET.yy).rgb;
-                fixed3 l12 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv + OFFSET.zy).rgb;
+                half3 l10 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.xy).rgb;
+                half3 l11 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.yy).rgb;
+                half3 l12 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.zy).rgb;
 
-                fixed3 l20 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv + OFFSET.xz).rgb;
-                fixed3 l21 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv + OFFSET.yz).rgb;
-                fixed3 l22 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv + OFFSET.zz).rgb;
+                half3 l20 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.xz).rgb;
+                half3 l21 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.yz).rgb;
+                half3 l22 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.zz).rgb;
 
                 fog = (l00 * weights[0][0]) + (l01 * weights[0][1]) + (l02 * weights[0][2]) 
                     + (l10 * weights[1][0]) + (l11 * weights[1][1]) + (l12 * weights[1][2])
                     + (l20 * weights[2][0]) + (l21 * weights[2][1]) + (l22 * weights[2][2]);
 
                 #else
-                fog = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv).rgb;
+                fog = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv);
                 #endif
 
-                return fixed4(fog, 1);
+                return half4(fog, 1);
             }
-            ENDCG
+            ENDHLSL
         }
     }
 }
