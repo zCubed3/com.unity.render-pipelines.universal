@@ -56,6 +56,7 @@ float4x4 _MainLightWorldToShadow[MAX_SHADOW_CASCADES + 1];
 
 half4 _AdditionalShadowParams[MAX_VISIBLE_LIGHTS];
 float4x4 _AdditionalLightsWorldToShadow[MAX_VISIBLE_LIGHTS];
+float4 _AdditionalLightsFogParams[MAX_VISIBLE_LIGHTS];
 
 //
 // Fog Inputs
@@ -239,8 +240,10 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             else
                 shadow = 1;
             
+            float4 params = _AdditionalLightsFogParams[l];
+            
             float LDotV = saturate(dot(lDir, sRay.direction));
-            LDotV = 1;
+            LDotV = params.x <= 0.0 ? 1.0 : pow(LDotV, params.x);
             
             float fac = saturate(MieScattering(LDotV, _FogParams.w)) * attenuation * shadow;
             

@@ -9,15 +9,7 @@ namespace UnityEngine.Rendering.Universal.Additions
         {
             public ComputeShader computeShader;
             public Shader blendShader;
-
-            [Header("TODO: Integrate into camera!")]
-            public float far = 10;
-            public float density = 1;
-            public float scattering = 0.5f;
-            public int steps = 256;
             public int tileSize = 32;
-
-            public int downsample = 0;
         }
 
         [Header("EXPERIMENTAL!")]

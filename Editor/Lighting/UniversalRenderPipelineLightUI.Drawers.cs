@@ -483,7 +483,14 @@ namespace UnityEditor.Rendering.Universal
 
             using (new EditorGUI.DisabledScope(!serializedLight.additionalLightData.volumetricsEnabled))
             {
+                serializedLight.additionalLightData.volumetricsSyncIntensity = EditorGUILayout.Toggle("Sync Intensity?", serializedLight.additionalLightData.volumetricsSyncIntensity);
 
+                using (new EditorGUI.DisabledScope(serializedLight.additionalLightData.volumetricsSyncIntensity))
+                {
+                    serializedLight.additionalLightData.volumetricsIntensity = EditorGUILayout.FloatField("Intensity", serializedLight.additionalLightData.volumetricsIntensity);
+                }
+
+                serializedLight.additionalLightData.volumetricsPower = EditorGUILayout.FloatField("Scattering Power", serializedLight.additionalLightData.volumetricsPower);
             }
         }
     }

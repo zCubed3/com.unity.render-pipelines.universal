@@ -139,5 +139,30 @@ namespace UnityEngine.Rendering.Universal
             get => m_VolumetricsEnabled;
             set => m_VolumetricsEnabled = value;
         }
+
+        [Tooltip("Toggles whether the volumetric intensity of this light should match the light intensity.")]
+        [SerializeField] bool m_VolumetricsSyncIntensity = true;
+        public bool volumetricsSyncIntensity
+        {
+            get => m_VolumetricsSyncIntensity;
+            set => m_VolumetricsSyncIntensity = value;
+        }
+
+        [Tooltip("Changes the volumetric intensity of this light.")]
+        [SerializeField] float m_VolumetricsIntensity = 1.0f;
+        public float volumetricsIntensity
+        {
+            get => m_VolumetricsIntensity;
+            set => m_VolumetricsIntensity = value;
+        }
+
+        [Tooltip("How exponential the scattering appears.")]
+        [SerializeField] float m_VolumetricsPower = 1.0f;
+        public float volumetricsPower
+        {
+            get => m_VolumetricsPower;
+            set => m_VolumetricsPower = value;
+        }
+        // ================
     }
 }

@@ -13,6 +13,9 @@ namespace UnityEditor.Rendering.Universal
             public static GUIContent stackSettingsText = EditorGUIUtility.TrTextContent("Stack", "The list of overlay cameras assigned to this camera.");
             public static GUIContent cameras = EditorGUIUtility.TrTextContent("Cameras", "The list of overlay cameras assigned to this camera.");
             public static string inspectorOverlayCameraText = L10n.Tr("Inspector Overlay Camera");
+
+            // zCubed Additions
+            public static readonly GUIContent volumetricsHeader = new GUIContent("Volumetrics");
         }
     }
 }

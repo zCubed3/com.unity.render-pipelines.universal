@@ -577,6 +577,50 @@ namespace UnityEngine.Rendering.Universal
             set => m_AllowXRRendering = value;
         }
 
+        // zCubed Additions
+        [SerializeField] bool m_RenderVolumetrics = false;
+        public bool renderVolumetrics
+        {
+            get => m_RenderVolumetrics;
+            set => m_RenderVolumetrics = value;
+        }
+
+        [SerializeField] int m_VolumetricsDownsampling = 1;
+        public int volumetricsDownsampling
+        {
+            get => m_VolumetricsDownsampling;
+            set => m_VolumetricsDownsampling = value;
+        }
+
+        [SerializeField] int m_VolumetricsSteps = 64;
+        public int volumetricsSteps
+        {
+            get => m_VolumetricsSteps;
+            set => m_VolumetricsSteps = value;
+        }
+
+        [SerializeField] float m_VolumetricsFar = 10.0f;
+        public float volumetricsFar
+        {
+            get => m_VolumetricsFar;
+            set => m_VolumetricsFar = value;
+        }
+
+        [SerializeField] float m_VolumetricsDensity = 1.0f;
+        public float volumetricsDensity
+        {
+            get => m_VolumetricsDensity;
+            set => m_VolumetricsDensity = value;
+        }
+
+        [SerializeField] float m_VolumetricsScattering = 0.5f;
+        public float volumetricsScattering
+        {
+            get => m_VolumetricsScattering;
+            set => m_VolumetricsScattering = value;
+        }
+        // ================
+
         public void OnBeforeSerialize()
         {
         }

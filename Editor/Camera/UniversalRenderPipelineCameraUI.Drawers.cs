@@ -26,6 +26,10 @@ namespace UnityEditor.Rendering.Universal
             Environment = 1 << 6,
             /// <summary> Stack</summary>
             Stack = 1 << 7,
+
+            // zCubed Additions
+            Volumetrics = 1 << 8
+            // ================
         }
 
         static readonly ExpandedState<Expandable, Camera> k_ExpandedState = new(Expandable.Projection, "URP");
@@ -55,7 +59,11 @@ namespace UnityEditor.Rendering.Universal
             Rendering.Drawer,
             SectionStackSettings,
             Environment.Drawer,
-            Output.Drawer
+            Output.Drawer,
+            CED.FoldoutGroup(Styles.volumetricsHeader,
+                Expandable.Volumetrics,
+                k_ExpandedState,
+            DrawVolumetricsContent)
         };
 
         static void DrawerProjection(UniversalRenderPipelineSerializedCamera p, Editor owner)
@@ -101,6 +109,17 @@ namespace UnityEditor.Rendering.Universal
             {
                 cameraEditor.DrawStackSettings();
             }
+        }
+
+        // zCubed Additions
+        static void DrawVolumetricsContent(UniversalRenderPipelineSerializedCamera p, Editor owner)
+        {
+            p.camerasAdditionalData[0].renderVolumetrics = EditorGUILayout.Toggle("Enabled", p.camerasAdditionalData[0].renderVolumetrics);
+            p.camerasAdditionalData[0].volumetricsDownsampling = EditorGUILayout.IntField("Downsampling", p.camerasAdditionalData[0].volumetricsDownsampling);
+            p.camerasAdditionalData[0].volumetricsSteps = EditorGUILayout.IntField("Steps", p.camerasAdditionalData[0].volumetricsSteps);
+            p.camerasAdditionalData[0].volumetricsFar = EditorGUILayout.FloatField("Far", p.camerasAdditionalData[0].volumetricsFar);
+            p.camerasAdditionalData[0].volumetricsDensity = EditorGUILayout.FloatField("Density", p.camerasAdditionalData[0].volumetricsDensity);
+            p.camerasAdditionalData[0].volumetricsScattering = EditorGUILayout.Slider("Scattering", p.camerasAdditionalData[0].volumetricsScattering, 0, 1);
         }
     }
 }
