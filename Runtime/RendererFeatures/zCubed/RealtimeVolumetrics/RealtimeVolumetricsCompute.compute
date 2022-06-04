@@ -202,7 +202,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             float3 shadowPoint = mul(_MainLightWorldToShadow[0], float4(sPoint, 1)).xyz;
             float shadow = _MainShadowmap.SampleCmpLevelZero(sampler_MainShadowmap, shadowPoint.xy, shadowPoint.z);
         
-            float LDotV = dot(normalize(_MainLightPosition.xyz), sRay.direction);
+            float LDotV = dot(-normalize(_MainLightPosition.xyz), sRay.direction);
             float fac = saturate(MieScattering(LDotV, _FogParams.w)) * shadow;
                 
             sampled += (fac * _MainLightColor.xyz) * stepPer * _FogParams.z;

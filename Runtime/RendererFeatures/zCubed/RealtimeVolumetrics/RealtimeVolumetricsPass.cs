@@ -16,6 +16,7 @@ namespace UnityEngine.Rendering.Universal.Additions
             public static readonly int _MainLightWorldToShadow = Shader.PropertyToID("_MainLightWorldToShadow");
             public static readonly int _MainLightPosition = Shader.PropertyToID("_MainLightPosition");
             public static readonly int _MainLightColor = Shader.PropertyToID("_MainLightColor");
+            public static readonly int _MainLightFogParams = Shader.PropertyToID("_MainLightFogParams");
 
             public static readonly int _AdditionalShadowmap = Shader.PropertyToID("_AdditionalShadowmap");
             public static readonly int _AdditionalLightsCount = Shader.PropertyToID("_AdditionalLightsCount");
@@ -175,9 +176,17 @@ namespace UnityEngine.Rendering.Universal.Additions
             int mainLightIdx = renderingData.lightData.mainLightIndex;
             if (mainLightIdx >= 0)
             {
+                var lightData = renderingData.lightData.visibleLights[mainLightIdx].light.GetUniversalAdditionalLightData();
+
                 var mainLight = renderingData.lightData.visibleLights[mainLightIdx];
                 cmd.SetComputeVectorParam(computeShader, Properties._MainLightPosition, mainLight.light.transform.forward);
-                cmd.SetComputeVectorParam(computeShader, Properties._MainLightColor, mainLight.finalColor);
+
+                if (!lightData.volumetricsSyncIntensity)
+                    cmd.SetComputeVectorParam(computeShader, Properties._MainLightColor, (mainLight.finalColor / mainLight.light.intensity) * lightData.volumetricsIntensity);
+                else
+                    cmd.SetComputeVectorParam(computeShader, Properties._MainLightColor, mainLight.finalColor);
+
+                cmd.SetComputeVectorParam(computeShader, Properties._MainLightFogParams, new Vector4(lightData.volumetricsPower, 0, 0, 0));
             }
             else
                 cmd.SetComputeVectorParam(computeShader, Properties._MainLightColor, Color.black);
@@ -212,8 +221,9 @@ namespace UnityEngine.Rendering.Universal.Additions
                             out temp
                         );
 
+                        VisibleLight light = renderingData.lightData.visibleLights[l];
                         if (!lightData.volumetricsSyncIntensity)
-                            additionalLightsColor[actual] = renderingData.lightData.visibleLights[l].light.color * lightData.volumetricsIntensity;
+                            additionalLightsColor[actual] = (light.light.color / light.light.intensity) * lightData.volumetricsIntensity;
 
                         additionalLightsFogParams[actual] = new Vector4(lightData.volumetricsPower, 0, 0, 0);
 
@@ -222,14 +232,21 @@ namespace UnityEngine.Rendering.Universal.Additions
                 }
             }
 
-            cmd.SetComputeVectorParam(computeShader, Properties._AdditionalLightsCount, new Vector4(actual, 0, 0, 0));
-            cmd.SetComputeVectorArrayParam(computeShader, Properties._AdditionalLightsPosition, additionalLightsPosition);
-            cmd.SetComputeVectorArrayParam(computeShader, Properties._AdditionalLightsColor, additionalLightsColor);
-            cmd.SetComputeVectorArrayParam(computeShader, Properties._AdditionalLightsAttenuation, additionalLightsAttenuation);
-            cmd.SetComputeVectorArrayParam(computeShader, Properties._AdditionalLightsSpotDir, additionalLightsSpotDir);
-            cmd.SetComputeVectorArrayParam(computeShader, Properties._AdditionalShadowParams, additionalLightPass.additionalLightIndexToShadowParams);
-            cmd.SetComputeMatrixArrayParam(computeShader, Properties._AdditionalLightsWorldToShadow, additionalLightPass.additionalLightShadowSliceIndexTo_WorldShadowMatrix);
-            cmd.SetComputeVectorArrayParam(computeShader, Properties._AdditionalLightsFogParams, additionalLightsFogParams);
+
+
+            if (actual > 0)
+            {
+                cmd.SetComputeVectorParam(computeShader, Properties._AdditionalLightsCount, new Vector4(actual, 0, 0, 0));
+                cmd.SetComputeVectorArrayParam(computeShader, Properties._AdditionalLightsPosition, additionalLightsPosition);
+                cmd.SetComputeVectorArrayParam(computeShader, Properties._AdditionalLightsColor, additionalLightsColor);
+                cmd.SetComputeVectorArrayParam(computeShader, Properties._AdditionalLightsAttenuation, additionalLightsAttenuation);
+                cmd.SetComputeVectorArrayParam(computeShader, Properties._AdditionalLightsSpotDir, additionalLightsSpotDir);
+                cmd.SetComputeVectorArrayParam(computeShader, Properties._AdditionalShadowParams, additionalLightPass.additionalLightIndexToShadowParams);
+                cmd.SetComputeMatrixArrayParam(computeShader, Properties._AdditionalLightsWorldToShadow, additionalLightPass.additionalLightShadowSliceIndexTo_WorldShadowMatrix);
+                cmd.SetComputeVectorArrayParam(computeShader, Properties._AdditionalLightsFogParams, additionalLightsFogParams);
+            }
+            else
+                cmd.SetComputeVectorParam(computeShader, Properties._AdditionalLightsCount, Vector4.zero);
 
             cmd.SetComputeVectorParam(computeShader, Properties._FogParams, new Vector4(
                 additionalCameraData.volumetricsSteps,
