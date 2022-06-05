@@ -53,6 +53,7 @@ SamplerComparisonState sampler_AdditionalShadowmap;
 // URP Inputs
 //
 float4x4 _MainLightWorldToShadow[MAX_SHADOW_CASCADES + 1];
+float4 _MainLightShadowParams;
 
 half4 _AdditionalShadowParams[MAX_VISIBLE_LIGHTS];
 float4x4 _AdditionalLightsWorldToShadow[MAX_VISIBLE_LIGHTS];
@@ -200,7 +201,11 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         if (length(_MainLightColor) > 0.0)
         {
             float3 shadowPoint = mul(_MainLightWorldToShadow[0], float4(sPoint, 1)).xyz;
-            float shadow = _MainShadowmap.SampleCmpLevelZero(sampler_MainShadowmap, shadowPoint.xy, shadowPoint.z);
+
+            float shadow = 1;
+            
+            if (_MainLightShadowParams.x > 0)
+               shadow = _MainShadowmap.SampleCmpLevelZero(sampler_MainShadowmap, shadowPoint.xy, shadowPoint.z);
         
             float LDotV = dot(-normalize(_MainLightPosition.xyz), sRay.direction);
             float fac = saturate(MieScattering(LDotV, _FogParams.w)) * shadow;
@@ -251,6 +256,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         }
     }
 
-    _Result[id.xy] = float4(sampled, 1);
+    _Result[id.xy] = float4(saturate(sampled), 1);
     //_Result[id.xy] = float4(sRay.origin, 1);
 }

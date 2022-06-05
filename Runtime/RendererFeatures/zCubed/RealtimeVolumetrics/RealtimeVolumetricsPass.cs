@@ -14,6 +14,7 @@ namespace UnityEngine.Rendering.Universal.Additions
 
             public static readonly int _MainShadowmap = Shader.PropertyToID("_MainShadowmap");
             public static readonly int _MainLightWorldToShadow = Shader.PropertyToID("_MainLightWorldToShadow");
+            public static readonly int _MainLightShadowParams = Shader.PropertyToID("_MainLightShadowParams");
             public static readonly int _MainLightPosition = Shader.PropertyToID("_MainLightPosition");
             public static readonly int _MainLightColor = Shader.PropertyToID("_MainLightColor");
             public static readonly int _MainLightFogParams = Shader.PropertyToID("_MainLightFogParams");
@@ -52,7 +53,7 @@ namespace UnityEngine.Rendering.Universal.Additions
         //
         // Properties
         //
-        ComputeShader computeShader { get => settings.computeShader; }
+        public ComputeShader computeShader;
 
         //
         // Sync with URP values!
@@ -182,9 +183,9 @@ namespace UnityEngine.Rendering.Universal.Additions
 
             if (mainLightIdx >= 0 && !skipMain)
             {
-                var lightData = renderingData.lightData.visibleLights[mainLightIdx].light.GetUniversalAdditionalLightData();
-
                 var mainLight = renderingData.lightData.visibleLights[mainLightIdx];
+                var lightData = mainLight.light.GetUniversalAdditionalLightData();
+
                 cmd.SetComputeVectorParam(computeShader, Properties._MainLightPosition, mainLight.light.transform.forward);
 
                 if (!lightData.volumetricsSyncIntensity)
@@ -193,6 +194,8 @@ namespace UnityEngine.Rendering.Universal.Additions
                     cmd.SetComputeVectorParam(computeShader, Properties._MainLightColor, mainLight.finalColor);
 
                 cmd.SetComputeVectorParam(computeShader, Properties._MainLightFogParams, new Vector4(lightData.volumetricsPower, 0, 0, 0));
+                cmd.SetComputeVectorParam(computeShader, Properties._MainLightShadowParams, mainLight.light.shadows != LightShadows.None ? Vector4.one : Vector4.zero);
+
             }
             else
                 cmd.SetComputeVectorParam(computeShader, Properties._MainLightColor, Color.black);
@@ -237,7 +240,6 @@ namespace UnityEngine.Rendering.Universal.Additions
                     }
                 }
             }
-
 
 
             if (actual > 0)

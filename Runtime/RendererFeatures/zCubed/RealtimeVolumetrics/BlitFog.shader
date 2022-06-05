@@ -1,4 +1,4 @@
-Shader "zCubed/Experiments/BlitFog"
+Shader "zCubed/Volumetrics/BlitFog"
 {
     Properties
     {
@@ -39,7 +39,7 @@ Shader "zCubed/Experiments/BlitFog"
                 v2f o;
 
                 UNITY_SETUP_INSTANCE_ID(v);
-				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
                 o.vertex = float4(v.vertex.xyz, 1);
                 o.uv = v.uv;
@@ -74,31 +74,21 @@ Shader "zCubed/Experiments/BlitFog"
                 #define MULTISAMPLE
 
                 #ifdef MULTISAMPLE
-                // Because multi sampling is performance heavy, manually doing this is somehow more performant?
-                const float RADIUS = 0.0002;
-                const float3 OFFSET = float3(-1, 0, 1) * RADIUS;
-                const float3x3 weights = float3x3(
-                    0.0625, 0.1, 0.0625,
-                    0.1, 0.35, 0.1,
-                    0.0625, 0.1, 0.0625
-                );
+                const float2 radius = float2(0.005, 0.005);
 
-                half3 l00 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.xx).rgb;
-                half3 l01 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.yx).rgb;
-                half3 l02 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.zx).rgb;
-
-                half3 l10 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.xy).rgb;
-                half3 l11 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.yy).rgb;
-                half3 l12 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.zy).rgb;
-
-                half3 l20 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.xz).rgb;
-                half3 l21 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.yz).rgb;
-                half3 l22 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + OFFSET.zz).rgb;
-
-                fog = (l00 * weights[0][0]) + (l01 * weights[0][1]) + (l02 * weights[0][2]) 
-                    + (l10 * weights[1][0]) + (l11 * weights[1][1]) + (l12 * weights[1][2])
-                    + (l20 * weights[2][0]) + (l21 * weights[2][1]) + (l22 * weights[2][2]);
-
+                for (int r = 0; r < 5; r++) {
+                    float ud = radius.y * (r - 1);
+            
+                    float3 l00 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + float2(-radius.x, ud));
+                    float3 l01 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + float2(-radius.x / 2, ud));
+                    float3 l02 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + float2(0, ud));
+                    float3 l03 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + float2(radius.x / 2, ud));
+                    float3 l04 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + float2(radius.x, ud));
+            
+                    fog += l00 + l01 + l02 + l03 + l04;
+                }
+            
+                fog /= 5 * 5;
                 #else
                 fog = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv);
                 #endif

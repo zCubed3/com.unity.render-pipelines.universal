@@ -124,12 +124,17 @@ namespace UnityEditor.Rendering.Universal
 
         static void DrawVolumetricsContent(UniversalRenderPipelineSerializedCamera p, Editor owner)
         {
+            EditorGUI.BeginChangeCheck();
+
             EditorGUILayout.PropertyField(p.renderVolumetrics, VolumetricsStyles.RenderVolumetrics);
-            EditorGUILayout.PropertyField(p.volumetricsDownsampling, VolumetricsStyles.VolumetricsDownsampling);
+            EditorGUILayout.IntSlider(p.volumetricsDownsampling, 0, 8, VolumetricsStyles.VolumetricsDownsampling);
             EditorGUILayout.PropertyField(p.volumetricsSteps, VolumetricsStyles.VolumetricsSteps);
             EditorGUILayout.PropertyField(p.volumetricsFar, VolumetricsStyles.VolumetricsFar);
             EditorGUILayout.PropertyField(p.volumetricsDensity, VolumetricsStyles.VolumetricsDensity);
-            EditorGUILayout.PropertyField(p.volumetricsScattering, VolumetricsStyles.VolumetricsScattering);
+            EditorGUILayout.Slider(p.volumetricsScattering, 0, 1, VolumetricsStyles.VolumetricsScattering);
+
+            if (EditorGUI.EndChangeCheck())
+                p.Apply();
         }
     }
 }
