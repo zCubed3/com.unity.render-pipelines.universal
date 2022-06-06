@@ -15,9 +15,9 @@ namespace UnityEngine.Rendering.Universal.Additions
             public static readonly int _MainShadowmap = Shader.PropertyToID("_MainShadowmap");
             public static readonly int _MainLightWorldToShadow = Shader.PropertyToID("_MainLightWorldToShadow");
             public static readonly int _MainLightShadowParams = Shader.PropertyToID("_MainLightShadowParams");
+            public static readonly int _MainLightFogParams = Shader.PropertyToID("_MainLightFogParams");
             public static readonly int _MainLightPosition = Shader.PropertyToID("_MainLightPosition");
             public static readonly int _MainLightColor = Shader.PropertyToID("_MainLightColor");
-            public static readonly int _MainLightFogParams = Shader.PropertyToID("_MainLightFogParams");
 
             public static readonly int _AdditionalShadowmap = Shader.PropertyToID("_AdditionalShadowmap");
             public static readonly int _AdditionalLightsCount = Shader.PropertyToID("_AdditionalLightsCount");
@@ -102,6 +102,8 @@ namespace UnityEngine.Rendering.Universal.Additions
             desc.width /= p2;
             desc.height /= p2;
             desc.enableRandomWrite = true;
+            desc.useDynamicScale = false;
+            desc.msaaSamples = 1;
             
             // Because single pass instanced causes issues we need to ensure the color buffer we get is only a Texture2D
             desc.dimension = TextureDimension.Tex2D;
