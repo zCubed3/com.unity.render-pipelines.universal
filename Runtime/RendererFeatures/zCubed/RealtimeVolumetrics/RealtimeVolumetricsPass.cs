@@ -35,6 +35,8 @@ namespace UnityEngine.Rendering.Universal.Additions
             public static readonly int _FogParams = Shader.PropertyToID("_FogParams");
             public static readonly int _FogSteps = Shader.PropertyToID("_FogSteps");
 
+            public static readonly int _PassData = Shader.PropertyToID("_PassData");
+
             public static readonly int _MainTex = Shader.PropertyToID("_MainTex");
             public static readonly int _EyeIndex = Shader.PropertyToID("_EyeIndex");
         }
@@ -134,8 +136,10 @@ namespace UnityEngine.Rendering.Universal.Additions
             else
                 cmd.DisableKeyword(computeShader, xrKeyword);
 
-            cmd.SetComputeTextureParam(computeShader, kernel, Properties._SceneDepth, renderingData.cameraData.renderer.cameraDepthTarget);
             cmd.SetComputeTextureParam(computeShader, kernel, Properties._Result, fogIdent);
+
+            cmd.SetComputeVectorParam(computeShader, Properties._PassData, new Vector4(fogWidth, fogHeight, 0, 0));
+            cmd.SetGlobalVector(Properties._PassData, new Vector4(fogWidth, fogHeight, 0, additionalCameraData.volumetricsSteps));
 
             Matrix4x4 camToWorld;
             Matrix4x4 worldToCam;
@@ -289,7 +293,6 @@ namespace UnityEngine.Rendering.Universal.Additions
             cmd.DispatchCompute(computeShader, kernel, tilesX, tilesY, tilesZ);
 
             // Blit alternative for XR
-            cmd.SetGlobalFloat(Properties._EyeIndex, 0);
             cmd.SetGlobalInt(Properties._FogSteps, additionalCameraData.volumetricsSteps);
             cmd.SetGlobalTexture(Properties._MainTex, fogIdent);
             cmd.SetGlobalTexture(Properties._SceneDepth, renderingData.cameraData.renderer.cameraDepthTarget);
@@ -321,7 +324,7 @@ namespace UnityEngine.Rendering.Universal.Additions
                 cmd.SetComputeFloatParam(computeShader, Properties._EyeIndex, 1);
                 cmd.DispatchCompute(computeShader, kernel, tilesX, tilesY, tilesZ);
 
-                cmd.SetGlobalFloat(Properties._EyeIndex, 1);
+                cmd.SetGlobalVector(Properties._PassData, new Vector4(fogWidth, fogHeight, 1, additionalCameraData.volumetricsSteps));
                 cmd.SetRenderTarget(new RenderTargetIdentifier(renderingData.cameraData.renderer.cameraColorTarget, 0, CubemapFace.Unknown, -1));
                 cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, blendMaterial);
             }

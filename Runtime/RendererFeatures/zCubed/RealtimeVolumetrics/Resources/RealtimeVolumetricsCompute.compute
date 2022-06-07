@@ -36,10 +36,9 @@ Ray RayFromViewpoint(float2 vPoint)
 }
 
 Texture2D<float> _MainShadowmap;
-Texture2D<float> _AdditionalShadowmap;
-
 SamplerComparisonState sampler_MainShadowmap;
 
+Texture2D<float> _AdditionalShadowmap;
 SamplerComparisonState sampler_AdditionalShadowmap;
 
 //
@@ -63,36 +62,10 @@ float4 _AdditionalLightsFogParams[MAX_VISIBLE_LIGHTS];
 //
 // Fog Inputs
 //
-SamplerState linearClampSampler;
-
-TEXTURE2D_X(_SceneDepth);
-SamplerState sampler_SceneDepth;
-
 RWTexture3D<float4> _Result;
 
-float _EyeIndex;
+float4 _PassData; // xy = Texture Dimensions
 float4 _FogParams; // x = Steps, y = Far, z = Density, w = Scattering
-
-//
-// Randomness
-//
-// From: https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
-float Rand(float2 n)
-{
-    return frac(sin(dot(n, float2(12.9898, 4.1414))) * 43758.5453);
-}
-
-float Noise(float2 p)
-{
-    float2 ip = floor(p);
-    float2 u = frac(p);
-    u = u * u * (3.0 - 2.0 * u);
-	
-    float res = lerp(
-		lerp(Rand(ip), Rand(ip + float2(1.0, 0.0)), u.x),
-		lerp(Rand(ip + float2(0.0, 1.0)), Rand(ip + float2(1.0, 1.0)), u.x), u.y);
-    return res * res;
-}
 
 //
 // Fog scattering
@@ -107,7 +80,6 @@ float MieScattering(float lightDotView, float gScattering)
 //
 // URP borrowed functions
 //
-#define SHADER_HINT_NICE_QUALITY 1
 float DistanceAttenuation(float distanceSqr, half2 distanceAttenuation)
 {
     // We use a shared distance attenuation for additional directional and puctual lights
@@ -152,7 +124,6 @@ half AngleAttenuation(half3 spotDirection, half3 lightDirection, half2 spotAtten
 // TODO: Optimization
 // TODO: Better shadow filtering
 // TODO: Soft / Hard shadow switching
-// TODO: Make MieScattering behave better
 
 [numthreads(8,8,8)]
 void VolumetricMain (uint3 id : SV_DispatchThreadID)

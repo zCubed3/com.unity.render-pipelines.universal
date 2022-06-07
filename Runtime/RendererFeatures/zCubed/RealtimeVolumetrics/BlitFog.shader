@@ -64,8 +64,7 @@ Shader "zCubed/Volumetrics/BlitFog"
             float4x4 _Projection;
             float4x4 _InverseProjection;
             float4 _FogParams;
-            float _EyeIndex;
-            int _FogSteps;
+            float4 _PassData;
 
             CBUFFER_END
 
@@ -74,12 +73,14 @@ Shader "zCubed/Volumetrics/BlitFog"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 
                 #ifdef UNITY_STEREO_INSTANCING_ENABLED
-                if (_EyeIndex != unity_StereoEyeIndex)
+                if (_PassData.z != unity_StereoEyeIndex)
                     return 0;
                 #endif
 
                 float2 uv = i.uv;
                 float2 coords = (uv - 0.5) * 2.0;
+
+                float2 texel = 1.0 / _PassData.xy;
 
                 // Project screen coordinates back into world space
                 float d = SAMPLE_TEXTURE2D_X(_SceneDepth, sampler_SceneDepth, uv);
@@ -96,12 +97,13 @@ Shader "zCubed/Volumetrics/BlitFog"
                 float3 sVector = sStart - wPos;
                 float sOcclude = dot(sVector, sVector);
 
-                float per = 1.0 / _FogSteps;
+                float per = 1.0 / _PassData.w;
 
                 half3 fog = (0).rrr;
+                uv += texel * 0.5;
 
                 [loop]
-                for (int f = 0; f < _FogSteps; f++) {
+                for (int f = 0; f < _PassData.w; f++) {
                     float s = per * f;
 
                     float3 sPoint = lerp(sStart, sEnd, s * s);

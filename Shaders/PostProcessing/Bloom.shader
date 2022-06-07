@@ -235,12 +235,7 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
             
             // URP Old
-            // half3 color = Upsample(UnityStereoTransformScreenSpaceTex(input.uv));
-
-            // zCubed Additions
-            float2 uv = UnityStereoTransformScreenSpaceTex(input.uv);
-            half3 color = Upsample(uv);
-            color = lerp(SAMPLE_TEXTURE2D(_SourceTex, sampler_LinearClamp, uv), color, 0.9);
+            half3 color = Upsample(UnityStereoTransformScreenSpaceTex(input.uv));
 
             return EncodeHDR(color);
         }
