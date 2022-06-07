@@ -58,7 +58,7 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
         #if _BLOOM_HQ
 
             // zCubed Additions
-            //#define URP_OLD_DOWNSAMPLE
+            #define URP_OLD_DOWNSAMPLE
             #ifdef URP_OLD_DOWNSAMPLE
             float texelSize = _SourceTex_TexelSize.x;
             half4 A = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + texelSize * float2(-1.0, -1.0));
@@ -188,7 +188,7 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
         {
             // zCubed Additions
             // URP Old
-            //#define URP_OLD_UPSAMPLE
+            #define URP_OLD_UPSAMPLE
             #ifdef URP_OLD_UPSAMPLE
 
             half3 highMip = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv));
