@@ -592,6 +592,13 @@ namespace UnityEngine.Rendering.Universal
             set => m_VolumetricsDownsampling = value;
         }
 
+        [SerializeField] int m_VolumetricsSlices = 128;
+        public int volumetricsSlices
+        {
+            get => m_VolumetricsSlices;
+            set => m_VolumetricsSlices = value;
+        }
+
         [SerializeField] int m_VolumetricsSteps = 64;
         public int volumetricsSteps
         {

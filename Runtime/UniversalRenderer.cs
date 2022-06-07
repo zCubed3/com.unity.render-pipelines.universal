@@ -505,10 +505,6 @@ namespace UnityEngine.Rendering.Universal
             // Some render cases (e.g. Material previews) have shown we need to create a depth texture when we're forcing a prepass.
             createDepthTexture |= m_DepthPrimingMode == DepthPrimingMode.Forced;
 
-            // Fix for scene view lacking a depth texture
-            if (cameraData.isSceneViewCamera)
-                createDepthTexture = true;
-
 #if ENABLE_VR && ENABLE_XR_MODULE
             if (cameraData.xr.enabled)
             {
@@ -517,6 +513,10 @@ namespace UnityEngine.Rendering.Universal
                 createColorTexture = createDepthTexture;
             }
 #endif
+
+            // zCubed Additions
+            // zCubed: Unity wasn't allocating a depth texture!
+            createDepthTexture = true;
 
 #if UNITY_ANDROID || UNITY_WEBGL
             if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.Vulkan)

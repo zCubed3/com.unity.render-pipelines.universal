@@ -13,11 +13,9 @@ namespace UnityEngine.Rendering.Universal.Additions
 
             [Tooltip("If this is set, we use a different blending shader")]
             public Shader blendShader;
-
-            public int tileSize = 32;
         }
 
-        [Header("EXPERIMENTAL!")]
+        [Header("EXPERIMENTAL and WIP!")]
         public Settings settings;
 
         RealtimeVolumetricsPass fogPass;

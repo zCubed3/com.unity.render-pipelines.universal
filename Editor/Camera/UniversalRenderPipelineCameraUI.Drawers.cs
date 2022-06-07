@@ -116,7 +116,8 @@ namespace UnityEditor.Rendering.Universal
         {
             public static GUIContent RenderVolumetrics = new GUIContent("Render Volumetrics", "Should this camera render a volumetrics pass?");
             public static GUIContent VolumetricsDownsampling = new GUIContent("Downsampling", "How many times should we downsample? (res / 2^D)");
-            public static GUIContent VolumetricsSteps = new GUIContent("Steps", "How many steps are taken from the camera to the far distance?");
+            public static GUIContent VolumetricsSlices = new GUIContent("Slices", "How deep is the volumetric buffer? (on the Z axis)");
+            public static GUIContent VolumetricsSteps = new GUIContent("Steps", "How many steps do we take through the volumetric buffer from front to back?");
             public static GUIContent VolumetricsFar = new GUIContent("Far", "How far should volumetrics be rendered out in front of the view?");
             public static GUIContent VolumetricsDensity = new GUIContent("Density", "How dense is the fog? (color * density)");
             public static GUIContent VolumetricsScattering = new GUIContent("Scattering", "What scattering factor should be used? (changes behavior of looking at lights)");
@@ -127,11 +128,25 @@ namespace UnityEditor.Rendering.Universal
             EditorGUI.BeginChangeCheck();
 
             EditorGUILayout.PropertyField(p.renderVolumetrics, VolumetricsStyles.RenderVolumetrics);
-            EditorGUILayout.IntSlider(p.volumetricsDownsampling, 0, 8, VolumetricsStyles.VolumetricsDownsampling);
-            EditorGUILayout.PropertyField(p.volumetricsSteps, VolumetricsStyles.VolumetricsSteps);
-            EditorGUILayout.PropertyField(p.volumetricsFar, VolumetricsStyles.VolumetricsFar);
-            EditorGUILayout.PropertyField(p.volumetricsDensity, VolumetricsStyles.VolumetricsDensity);
-            EditorGUILayout.Slider(p.volumetricsScattering, 0, 1, VolumetricsStyles.VolumetricsScattering);
+
+            using (var scope = new EditorGUI.DisabledScope(!p.renderVolumetrics.boolValue))
+            {
+                EditorGUILayout.LabelField($"Downsample Ratio Reference: 1920x1080 -> {1920 >> p.volumetricsDownsampling.intValue}x{1080 >> p.volumetricsDownsampling.intValue}");
+                EditorGUILayout.IntSlider(p.volumetricsDownsampling, 0, 8, VolumetricsStyles.VolumetricsDownsampling);
+                EditorGUILayout.Space();
+
+                EditorGUILayout.LabelField($"Slices = 3D Texture Depth, Example: (16 = 240x135x{p.volumetricsSlices.intValue})");
+                EditorGUILayout.PropertyField(p.volumetricsSlices, VolumetricsStyles.VolumetricsSlices);
+                EditorGUILayout.Space();
+
+                EditorGUILayout.LabelField($"Steps = Fog Compositor Steps");
+                EditorGUILayout.PropertyField(p.volumetricsSteps, VolumetricsStyles.VolumetricsSteps);
+                EditorGUILayout.Space();
+
+                EditorGUILayout.PropertyField(p.volumetricsFar, VolumetricsStyles.VolumetricsFar);
+                EditorGUILayout.PropertyField(p.volumetricsDensity, VolumetricsStyles.VolumetricsDensity);
+                EditorGUILayout.Slider(p.volumetricsScattering, 0, 1, VolumetricsStyles.VolumetricsScattering);
+            }
 
             if (EditorGUI.EndChangeCheck())
                 p.Apply();

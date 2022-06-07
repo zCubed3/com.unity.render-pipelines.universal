@@ -1,4 +1,4 @@
-#pragma kernel CSMain
+#pragma kernel VolumetricMain
 
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
@@ -68,7 +68,7 @@ SamplerState linearClampSampler;
 TEXTURE2D_X(_SceneDepth);
 SamplerState sampler_SceneDepth;
 
-RWTexture2D<float4> _Result;
+RWTexture3D<float4> _Result;
 
 float _EyeIndex;
 float4 _FogParams; // x = Steps, y = Far, z = Density, w = Scattering
@@ -107,6 +107,7 @@ float MieScattering(float lightDotView, float gScattering)
 //
 // URP borrowed functions
 //
+#define SHADER_HINT_NICE_QUALITY 1
 float DistanceAttenuation(float distanceSqr, half2 distanceAttenuation)
 {
     // We use a shared distance attenuation for additional directional and puctual lights
@@ -153,114 +154,86 @@ half AngleAttenuation(half3 spotDirection, half3 lightDirection, half2 spotAtten
 // TODO: Soft / Hard shadow switching
 // TODO: Make MieScattering behave better
 
-[numthreads(32,32,1)]
-void CSMain (uint3 id : SV_DispatchThreadID)
+[numthreads(8,8,8)]
+void VolumetricMain (uint3 id : SV_DispatchThreadID)
 {
-    uint width, height;
-    _Result.GetDimensions(width, height);
+    uint width, height, depth;
+    _Result.GetDimensions(width, height, depth);
     
     float2 uv = float2((float) id.x / (float) width, (float)id.y / (float)height);
+    float slice = (float) id.z / (float) depth;
+    
     float2 coords = (uv - 0.5) * 2.0;
-        
     Ray sRay = RayFromViewpoint(coords);
-    
-    //
-    // Get the world point
-    //
-    _Projection[1][1] *= -1;
-    
-#ifdef UNITY_STEREO_INSTANCING_ENABLED
-    float d = _SceneDepth.SampleLevel(sampler_SceneDepth, float3(uv, _EyeIndex), 0).r;
-#else
-    float d = _SceneDepth.SampleLevel(sampler_SceneDepth, uv, 0).r;
-#endif
-    float4 clipPos = float4(coords, d, 1.0);
-    float4 viewPos = mul(_Projection, clipPos); // inverse projection by clip position
-    viewPos /= viewPos.w; // perspective division
-    float3 wPos = mul(_CameraToWorld, viewPos).xyz;
-    
-    float stepPer = 1.0 / _FogParams.x;
-    
+
     float3 sStart = sRay.origin;
     float3 sEnd = sStart + sRay.direction * _FogParams.y;
     
-    float sOcclude = distance(sStart, wPos);
     float3 sampled = 0;
+        
+    float3 sPoint = lerp(sStart, sEnd, slice * slice);
+
+    if (length(_MainLightColor) > 0.0)
+    {
+        float3 shadowPoint = mul(_MainLightWorldToShadow[0], float4(sPoint, 1)).xyz;
+
+        float shadow = 1;
+        
+        if (_MainLightShadowParams.x > 0)
+           shadow = _MainShadowmap.SampleCmpLevelZero(sampler_MainShadowmap, shadowPoint.xy, shadowPoint.z);
+    
+        float params = _MainLightFogParams;
+
+        float LDotV = saturate(dot(-_MainLightPosition.xyz, sRay.direction));
+        LDotV = params.x <= 0.0 ? 1.0 : pow(LDotV, params.x);
+
+        float fac = saturate(MieScattering(LDotV, _FogParams.w)) * shadow;
+            
+        sampled += _MainLightColor.xyz * _FogParams.z * fac;
+    }
     
     [loop]
-    for (int i = 0; i < _FogParams.x; i++)
+    for (int l = 0; l < _AdditionalLightsCount.x; l++)
     {
-        float mix = i * stepPer;
-        mix *= mix;
+        float4 lAtten = _AdditionalLightsAttenuation[l];
+        float4 lSpotDir = _AdditionalLightsSpotDir[l];
         
-        float3 sPoint = lerp(sStart, sEnd, mix);
+        float3 lVector = _AdditionalLightsPosition[l].xyz - sPoint * _AdditionalLightsPosition[l].w;
+        float dSqr = max(dot(lVector, lVector), 0.0);
 
-        // If we cross the the fragment, we've been occluded
-        if (distance(sStart, sPoint) > sOcclude)
-            break;
-
-        if (length(_MainLightColor) > 0.0)
+        half3 lDir = half3(lVector * rsqrt(dSqr));
+        half attenuation = half(DistanceAttenuation(dSqr, lAtten.xy) * AngleAttenuation(lSpotDir.xyz, lDir, lAtten.zw));
+        
+        float4 shadowParams = _AdditionalShadowParams[l];
+        int shadowSliceIndex = shadowParams.w;
+        
+        float shadow;
+        if (shadowSliceIndex >= 0)
         {
-            float3 shadowPoint = mul(_MainLightWorldToShadow[0], float4(sPoint, 1)).xyz;
-
-            float shadow = 1;
-            
-            if (_MainLightShadowParams.x > 0)
-               shadow = _MainShadowmap.SampleCmpLevelZero(sampler_MainShadowmap, shadowPoint.xy, shadowPoint.z);
-        
-            float params = _MainLightFogParams;
-
-            float LDotV = saturate(dot(-_MainLightPosition.xyz, sRay.direction));
-            LDotV = params.x <= 0.0 ? 1.0 : pow(LDotV, params.x);
-
-            float fac = saturate(MieScattering(LDotV, _FogParams.w)) * shadow;
-                
-            sampled += _MainLightColor.xyz * _FogParams.z * fac * stepPer;
-        }
-        
-        [loop]
-        for (int l = 0; l < _AdditionalLightsCount.x; l++)
-        {
-            float4 lAtten = _AdditionalLightsAttenuation[l];
-            float4 lSpotDir = _AdditionalLightsSpotDir[l];
-            
-            float3 lVector = _AdditionalLightsPosition[l].xyz - sPoint * _AdditionalLightsPosition[l].w;
-            float dSqr = max(dot(lVector, lVector), 0.0);
-
-            half3 lDir = half3(lVector * rsqrt(dSqr));
-            half attenuation = half(DistanceAttenuation(dSqr, lAtten.xy) * AngleAttenuation(lSpotDir.xyz, lDir, lAtten.zw));
-            
-            float4 shadowParams = _AdditionalShadowParams[l];
-            int shadowSliceIndex = shadowParams.w;
-            
-            float shadow;
-            if (shadowSliceIndex >= 0)
+            if (shadowParams.z)
             {
-                if (shadowParams.z)
-                {
-                    float cubemapFaceId = CubeMapFaceID(-lDir);
-                    shadowSliceIndex += cubemapFaceId;
-                }
-                
-                float4 shadowPoint = mul(_AdditionalLightsWorldToShadow[shadowSliceIndex], float4(sPoint, 1));
-                shadowPoint.xyz /= shadowPoint.w;
-                
-                shadow = _AdditionalShadowmap.SampleCmpLevelZero(sampler_AdditionalShadowmap, shadowPoint.xy, shadowPoint.z);
+                float cubemapFaceId = CubeMapFaceID(-lDir);
+                shadowSliceIndex += cubemapFaceId;
             }
-            else
-                shadow = 1;
             
-            float4 params = _AdditionalLightsFogParams[l];
+            float4 shadowPoint = mul(_AdditionalLightsWorldToShadow[shadowSliceIndex], float4(sPoint, 1));
+            shadowPoint.xyz /= shadowPoint.w;
             
-            float LDotV = saturate(dot(lDir, sRay.direction));
-            LDotV = params.x <= 0.0 ? 1.0 : pow(LDotV, params.x);
-            
-            float fac = saturate(MieScattering(LDotV, _FogParams.w)) * attenuation * shadow;
-            
-            sampled += _AdditionalLightsColor[l].xyz * _FogParams.z * fac * stepPer;
+            shadow = _AdditionalShadowmap.SampleCmpLevelZero(sampler_AdditionalShadowmap, shadowPoint.xy, shadowPoint.z);
         }
+        else
+            shadow = 1;
+        
+        float4 params = _AdditionalLightsFogParams[l];
+        
+        float LDotV = saturate(dot(lDir, sRay.direction));
+        LDotV = params.x <= 0.0 ? 1.0 : pow(LDotV, params.x);
+        
+        float fac = saturate(MieScattering(LDotV, _FogParams.w)) * attenuation * shadow;
+        
+        sampled += _AdditionalLightsColor[l].xyz * _FogParams.z * fac;
     }
 
-    _Result[id.xy] = float4(saturate(sampled), 1);
-    //_Result[id.xy] = float4(sRay.origin, 1);
+    _Result[id.xyz] = float4(sampled, 1);
+    //_Result[id.xyz] = float4(sPoint, 1);
 }

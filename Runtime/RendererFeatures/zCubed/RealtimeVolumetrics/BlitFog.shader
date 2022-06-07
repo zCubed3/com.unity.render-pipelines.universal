@@ -51,64 +51,67 @@ Shader "zCubed/Volumetrics/BlitFog"
                 return o;
             }
 
-            Texture2D _MainTex;
+            Texture3D _MainTex;
             SAMPLER(sampler_MainTex);
 
+            TEXTURE2D_X(_SceneDepth);
+            SAMPLER(sampler_SceneDepth);
+
+            CBUFFER_START(FOG_SETTINGS);
+
+            float4x4 _CameraToWorld;
+            float4x4 _WorldToCamera;
+            float4x4 _Projection;
+            float4x4 _InverseProjection;
+            float4 _FogParams;
             float _EyeIndex;
+            int _FogSteps;
+
+            CBUFFER_END
 
             half4 frag(v2f i) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 
-                half3 fog = (0).rrr;
-
-                float2 uv = i.uv;
-
                 #ifdef UNITY_STEREO_INSTANCING_ENABLED
-                //uv = UnityStereoTransformScreenSpaceTex(uv);
-
                 if (_EyeIndex != unity_StereoEyeIndex)
                     return 0;
                 #endif
 
-                #define BLUR
+                float2 uv = i.uv;
+                float2 coords = (uv - 0.5) * 2.0;
 
-                #ifdef BLUR
-                // _MainTex texel size was wrong!
-                uint width, height;
-                _MainTex.GetDimensions(width, height);
-                float4 texelSize = float4(1.0 / width, 1.0 / height, 0, 0);
+                // Project screen coordinates back into world space
+                float d = SAMPLE_TEXTURE2D_X(_SceneDepth, sampler_SceneDepth, uv);
+                float4 clipPos = float4(coords, d, 1.0);
+                float4 viewPos = mul(_Projection, clipPos);
+                viewPos /= viewPos.w;
+                float3 wPos = mul(_CameraToWorld, viewPos).xyz;
 
-                // 5 x 5
-                // https://www.researchgate.net/figure/Discrete-approximation-of-the-Gaussian-kernels-3x3-5x5-7x7_fig2_325768087
-                const float WEIGHTS[25] = {
-                    1 / 273.0, 4 / 273.0, 7 / 273.0, 4 / 273.0, 1 / 273.0,
-                    4 / 273.0, 16 / 273.0, 26 / 273.0, 16 / 273.0, 4 / 273.0,
-                    7 / 273.0, 26 / 273.0, 41 / 273.0, 26 / 273.0, 7 / 273.0,
-                    4 / 273.0, 16 / 273.0, 26 / 273.0, 16 / 273.0, 4 / 273.0,
-                    1 / 273.0, 4 / 273.0, 7 / 273.0, 4 / 273.0, 1 / 273.0
-                };
+                float3 sStart = _WorldSpaceCameraPos;
+                float3 sEnd = mul(_InverseProjection, float4(coords, 0, 1)).xyz;
+                sEnd = mul(_CameraToWorld, float4(sEnd, 0)).xyz;
+                sEnd = sStart + normalize(sEnd) * _FogParams.y;
 
-                const float RADIUS = 1.5;
+                float3 sVector = sStart - wPos;
+                float sOcclude = dot(sVector, sVector);
 
-                // Because of texel rounding, we need to shift the uv slightly
-                uv += texelSize * 0.5;
+                float per = 1.0 / _FogSteps;
 
-                [unroll]
-                for (int r = 0; r < 5; r++) {
-                    float yShift = ((r - 2.0) / 2.0) * texelSize.y * RADIUS;
+                half3 fog = (0).rrr;
 
-                    [unroll]
-                    for (int c = 0; c < 5; c++) {
-                        float xShift = ((c - 2.0) / 2.0) * texelSize.x * RADIUS;
+                [loop]
+                for (int f = 0; f < _FogSteps; f++) {
+                    float s = per * f;
 
-                        fog += SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + float2(xShift, yShift)) * WEIGHTS[r * 5 + c];
-                    }
+                    float3 sPoint = lerp(sStart, sEnd, s * s);
+                    float3 sVector = sStart - sPoint;
+
+                    if (dot(sVector, sVector) > sOcclude)
+                        break;
+
+                    fog += _MainTex.Sample(sampler_MainTex, float3(uv, per * f)) * per;
                 }
-
-                #else
-                fog = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv);
-                #endif
 
                 return half4(fog, 1);
             }
