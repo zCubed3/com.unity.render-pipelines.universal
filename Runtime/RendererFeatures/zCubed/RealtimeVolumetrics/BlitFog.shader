@@ -96,11 +96,11 @@ Shader "zCubed/Volumetrics/BlitFog"
 
                 [unroll]
                 for (int r = 0; r < 5; r++) {
-                    float yShift = ((((r + 1) / 5.0) - 0.5) * 2) * texelSize.y * RADIUS;
+                    float yShift = ((r - 2.0) / 2.0) * texelSize.y * RADIUS;
 
                     [unroll]
                     for (int c = 0; c < 5; c++) {
-                        float xShift = ((((c + 1) / 5.0) - 0.5) * 2) * texelSize.x * RADIUS;
+                        float xShift = ((c - 2.0) / 2.0) * texelSize.x * RADIUS;
 
                         fog += SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + float2(xShift, yShift)) * WEIGHTS[r * 5 + c];
                     }
