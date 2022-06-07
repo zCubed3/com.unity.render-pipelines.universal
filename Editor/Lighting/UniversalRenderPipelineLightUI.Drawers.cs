@@ -479,24 +479,25 @@ namespace UnityEditor.Rendering.Universal
         // zCubed Additions
         static void DrawVolumetricsContent(UniversalRenderPipelineSerializedLight serializedLight, Editor owner)
         {
-            EditorGUI.BeginChangeCheck();
-
-            serializedLight.additionalLightData.volumetricsEnabled = EditorGUILayout.Toggle("Enabled", serializedLight.additionalLightData.volumetricsEnabled);
-
-            using (new EditorGUI.DisabledScope(!serializedLight.additionalLightData.volumetricsEnabled))
+            using (var checkScope = new EditorGUI.ChangeCheckScope())
             {
-                serializedLight.additionalLightData.volumetricsSyncIntensity = EditorGUILayout.Toggle("Sync Intensity?", serializedLight.additionalLightData.volumetricsSyncIntensity);
+                EditorGUILayout.PropertyField(serializedLight.volumetricsEnabled);
 
-                using (new EditorGUI.DisabledScope(serializedLight.additionalLightData.volumetricsSyncIntensity))
+                using (new EditorGUI.DisabledScope(!serializedLight.volumetricsEnabled.boolValue))
                 {
-                    serializedLight.additionalLightData.volumetricsIntensity = EditorGUILayout.FloatField("Intensity", serializedLight.additionalLightData.volumetricsIntensity);
+                    EditorGUILayout.PropertyField(serializedLight.volumetricsSyncIntensity);
+
+                    using (new EditorGUI.DisabledScope(serializedLight.volumetricsSyncIntensity.boolValue))
+                    {
+                        EditorGUILayout.PropertyField(serializedLight.volumetricsIntensity);
+                    }
+
+                    EditorGUILayout.PropertyField(serializedLight.volumetricsPower);
                 }
 
-                serializedLight.additionalLightData.volumetricsPower = EditorGUILayout.FloatField("Scattering Power", serializedLight.additionalLightData.volumetricsPower);
+                if (checkScope.changed)
+                    serializedLight.Apply();
             }
-
-            if (EditorGUI.EndChangeCheck())
-                serializedLight.Apply();
         }
     }
 }

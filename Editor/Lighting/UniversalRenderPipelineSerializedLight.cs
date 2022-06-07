@@ -28,6 +28,13 @@ namespace UnityEditor.Rendering.Universal
         public SerializedProperty customShadowLayers { get; }
         public SerializedProperty shadowLayerMask { get; }
 
+        // zCubed Additions
+        public SerializedProperty volumetricsEnabled { get; }
+        public SerializedProperty volumetricsSyncIntensity { get; }
+        public SerializedProperty volumetricsIntensity { get; }
+        public SerializedProperty volumetricsPower { get; }
+
+
         /// <summary>Method that updates the <see cref="SerializedObject"/> of the Light and the Additional Light Data</summary>
         public void Update()
         {
@@ -68,6 +75,11 @@ namespace UnityEditor.Rendering.Universal
             lightLayerMask = serializedAdditionalDataObject.FindProperty("m_LightLayerMask");
             customShadowLayers = serializedAdditionalDataObject.FindProperty("m_CustomShadowLayers");
             shadowLayerMask = serializedAdditionalDataObject.FindProperty("m_ShadowLayerMask");
+
+            volumetricsEnabled = serializedAdditionalDataObject.FindProperty("m_VolumetricsEnabled");
+            volumetricsSyncIntensity = serializedAdditionalDataObject.FindProperty("m_VolumetricsSyncIntensity");
+            volumetricsIntensity = serializedAdditionalDataObject.FindProperty("m_VolumetricsIntensity");
+            volumetricsPower = serializedAdditionalDataObject.FindProperty("m_VolumetricsPower");
 
             settings.ApplyModifiedProperties();
         }

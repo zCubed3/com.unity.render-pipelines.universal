@@ -56,6 +56,10 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
             float2 uv = UnityStereoTransformScreenSpaceTex(input.uv);
 
         #if _BLOOM_HQ
+
+            // zCubed Additions
+            //#define URP_OLD_DOWNSAMPLE
+            #ifdef URP_OLD_DOWNSAMPLE
             float texelSize = _SourceTex_TexelSize.x;
             half4 A = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + texelSize * float2(-1.0, -1.0));
             half4 B = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + texelSize * float2(0.0, -1.0));
@@ -80,6 +84,43 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
             o += (G + H + M + L) * div.y;
 
             half3 color = o.xyz;
+
+            #else
+
+            //https://www.froyok.fr/blog/2021-12-ue4-custom-bloom/
+            const float2 COORDS[13] = {
+                float2( -1.0f,  1.0f ), float2(  1.0f,  1.0f ),
+                float2( -1.0f, -1.0f ), float2(  1.0f, -1.0f ),
+
+                float2(-2.0f, 2.0f), float2( 0.0f, 2.0f), float2( 2.0f, 2.0f),
+                float2(-2.0f, 0.0f), float2( 0.0f, 0.0f), float2( 2.0f, 0.0f),
+                float2(-2.0f,-2.0f), float2( 0.0f,-2.0f), float2( 2.0f,-2.0f)
+            };
+
+
+            const float WEIGHTS[13] = {
+                // 4 samples
+                // (1 / 4) * 0.5f = 0.125f
+                0.125f, 0.125f,
+                0.125f, 0.125f,
+
+                // 9 samples
+                // (1 / 9) * 0.5f
+                0.0555555f, 0.0555555f, 0.0555555f,
+                0.0555555f, 0.0555555f, 0.0555555f,
+                0.0555555f, 0.0555555f, 0.0555555f
+            };
+
+            float3 color = float3(0, 0, 0);
+
+            [unroll]
+            for( int i = 0; i < 13; i++ )
+            {
+                float2 currentUV = uv + COORDS[i] * _SourceTex_TexelSize.xy;
+                color += WEIGHTS[i] * SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, currentUV).rgb;
+            }
+
+            #endif
         #else
             half3 color = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv).xyz;
         #endif
@@ -106,21 +147,21 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
             float2 uv = UnityStereoTransformScreenSpaceTex(input.uv);
 
             // 9-tap gaussian blur on the downsampled source
-            half3 c0 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv - float2(texelSize * 4.0, 0.0)));
-            half3 c1 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv - float2(texelSize * 3.0, 0.0)));
-            half3 c2 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv - float2(texelSize * 2.0, 0.0)));
-            half3 c3 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv - float2(texelSize * 1.0, 0.0)));
-            half3 c4 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv                               ));
-            half3 c5 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + float2(texelSize * 1.0, 0.0)));
-            half3 c6 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + float2(texelSize * 2.0, 0.0)));
-            half3 c7 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + float2(texelSize * 3.0, 0.0)));
-            half3 c8 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + float2(texelSize * 4.0, 0.0)));
+            half4 c0 = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv - float2(texelSize * 4.0, 0.0));
+            half4 c1 = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv - float2(texelSize * 3.0, 0.0));
+            half4 c2 = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv - float2(texelSize * 2.0, 0.0));
+            half4 c3 = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv - float2(texelSize * 1.0, 0.0));
+            half4 c4 = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv                               );
+            half4 c5 = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + float2(texelSize * 1.0, 0.0));
+            half4 c6 = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + float2(texelSize * 2.0, 0.0));
+            half4 c7 = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + float2(texelSize * 3.0, 0.0));
+            half4 c8 = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + float2(texelSize * 4.0, 0.0));
 
-            half3 color = c0 * 0.01621622 + c1 * 0.05405405 + c2 * 0.12162162 
+            half4 color = c0 * 0.01621622 + c1 * 0.05405405 + c2 * 0.12162162 
                         + c3 * 0.19459459 + c4 * 0.22702703 + c5 * 0.19459459 
                         + c6 * 0.12162162 + c7 * 0.05405405 + c8 * 0.01621622;
 
-            return EncodeHDR(color);
+            return color;
         }
 
         half4 FragBlurV(Varyings input) : SV_Target
@@ -130,21 +171,26 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
             float2 uv = UnityStereoTransformScreenSpaceTex(input.uv);
 
             // Optimized bilinear 5-tap gaussian on the same-sized source (9-tap equivalent)
-            half3 c0 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv - float2(0.0, texelSize * 3.23076923)));
-            half3 c1 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv - float2(0.0, texelSize * 1.38461538)));
-            half3 c2 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv                                      ));
-            half3 c3 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + float2(0.0, texelSize * 1.38461538)));
-            half3 c4 = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + float2(0.0, texelSize * 3.23076923)));
+            half4 c0 = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv - float2(0.0, texelSize * 3.23076923));
+            half4 c1 = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv - float2(0.0, texelSize * 1.38461538));
+            half4 c2 = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv                                      );
+            half4 c3 = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + float2(0.0, texelSize * 1.38461538));
+            half4 c4 = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + float2(0.0, texelSize * 3.23076923));
 
-            half3 color = c0 * 0.07027027 + c1 * 0.31621622
+            half4 color = c0 * 0.07027027 + c1 * 0.31621622
                         + c2 * 0.22702703
                         + c3 * 0.31621622 + c4 * 0.07027027;
 
-            return EncodeHDR(color);
+            return color;
         }
 
         half3 Upsample(float2 uv)
         {
+            // zCubed Additions
+            // URP Old
+            //#define URP_OLD_UPSAMPLE
+            #ifdef URP_OLD_UPSAMPLE
+
             half3 highMip = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv));
 
         #if _BLOOM_HQ && !defined(SHADER_API_GLES)
@@ -154,12 +200,48 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
         #endif
 
             return lerp(highMip, lowMip, Scatter);
+
+            #else
+
+            //https://www.froyok.fr/blog/2021-12-ue4-custom-bloom/
+            const float2 COORDS[9] = {
+                float2( -1.0f,  1.0f ), float2(  0.0f,  1.0f ), float2(  1.0f,  1.0f ),
+                float2( -1.0f,  0.0f ), float2(  0.0f,  0.0f ), float2(  1.0f,  0.0f ),
+                float2( -1.0f, -1.0f ), float2(  0.0f, -1.0f ), float2(  1.0f, -1.0f )
+            };
+
+            const float WEIGHTS[9] = {
+                0.0625f, 0.125f, 0.0625f,
+                0.125f,  0.25f,  0.125f,
+                0.0625f, 0.125f, 0.0625f
+            };
+
+            float3 color = float3(0, 0, 0);
+
+            [unroll]
+            for( int i = 0; i < 9; i++ )
+            {
+                float2 currentUV = uv + COORDS[i] * _SourceTexLowMip_TexelSize.xy;
+                color += WEIGHTS[i] * DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTexLowMip, sampler_LinearClamp, currentUV));
+            }
+
+            return color;
+
+            #endif
         }
 
         half4 FragUpsample(Varyings input) : SV_Target
         {
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-            half3 color = Upsample(UnityStereoTransformScreenSpaceTex(input.uv));
+            
+            // URP Old
+            // half3 color = Upsample(UnityStereoTransformScreenSpaceTex(input.uv));
+
+            // zCubed Additions
+            float2 uv = UnityStereoTransformScreenSpaceTex(input.uv);
+            half3 color = Upsample(uv);
+            color = lerp(SAMPLE_TEXTURE2D(_SourceTex, sampler_LinearClamp, uv), color, 0.9);
+
             return EncodeHDR(color);
         }
 
@@ -182,6 +264,7 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
             ENDHLSL
         }
 
+        
         Pass
         {
             Name "Bloom Blur Horizontal"
@@ -201,6 +284,7 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
                 #pragma fragment FragBlurV
             ENDHLSL
         }
+        
 
         Pass
         {

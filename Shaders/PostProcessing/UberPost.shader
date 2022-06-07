@@ -168,7 +168,10 @@ Shader "Hidden/Universal Render Pipeline/UberPost"
                 }
 
                 bloom.xyz *= BloomIntensity;
+                //color = lerp(color, bloom.xyz, 0.4);
+
                 color += bloom.xyz * BloomTint;
+                //color = bloom.xyz * BloomTint;
 
                 #if defined(BLOOM_DIRT)
                 {
