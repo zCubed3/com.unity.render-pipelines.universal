@@ -115,7 +115,7 @@ namespace UnityEditor.Rendering.Universal
         public static class VolumetricsStyles
         {
             public static GUIContent RenderVolumetrics = new GUIContent("Render Volumetrics", "Should this camera render a volumetrics pass?");
-            public static GUIContent VolumetricsDownsampling = new GUIContent("Downsampling", "How many times should we downsample? (res / 2^D)");
+            public static GUIContent VolumetricsPercent = new GUIContent("Percent", "Relative to screen resolution, how much should we reduce the resolution?");
             public static GUIContent VolumetricsSlices = new GUIContent("Slices", "How deep is the volumetric buffer? (on the Z axis)");
             public static GUIContent VolumetricsSteps = new GUIContent("Steps", "How many steps do we take through the volumetric buffer from front to back?");
             public static GUIContent VolumetricsFar = new GUIContent("Far", "How far should volumetrics be rendered out in front of the view?");
@@ -131,8 +131,8 @@ namespace UnityEditor.Rendering.Universal
 
             using (var scope = new EditorGUI.DisabledScope(!p.renderVolumetrics.boolValue))
             {
-                EditorGUILayout.LabelField($"Downsample Ratio Reference: 1920x1080 -> {1920 >> p.volumetricsDownsampling.intValue}x{1080 >> p.volumetricsDownsampling.intValue}");
-                EditorGUILayout.IntSlider(p.volumetricsDownsampling, 0, 8, VolumetricsStyles.VolumetricsDownsampling);
+                EditorGUILayout.LabelField($"Reference: 1920x1080 -> {Mathf.CeilToInt(1920.0f * p.volumetricsPercent.floatValue)}x{Mathf.CeilToInt(1080.0f * p.volumetricsPercent.floatValue)}");
+                EditorGUILayout.Slider(p.volumetricsPercent, 0, 1, VolumetricsStyles.VolumetricsPercent);
                 EditorGUILayout.Space();
 
                 EditorGUILayout.LabelField($"Slices = 3D Texture Depth, Example: (16 = 240x135x{p.volumetricsSlices.intValue})");

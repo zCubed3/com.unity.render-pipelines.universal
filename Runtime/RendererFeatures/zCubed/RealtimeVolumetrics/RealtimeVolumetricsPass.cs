@@ -91,8 +91,8 @@ namespace UnityEngine.Rendering.Universal.Additions
 
             RenderTextureDescriptor desc = renderingData.cameraData.cameraTargetDescriptor;
 
-            desc.width >>= additionalCameraData.volumetricsDownsampling;
-            desc.height >>= additionalCameraData.volumetricsDownsampling;
+            desc.width = Mathf.CeilToInt((float)desc.width * additionalCameraData.volumetricsPercent);
+            desc.height = Mathf.CeilToInt((float)desc.height * additionalCameraData.volumetricsPercent);
             desc.enableRandomWrite = true;
             desc.useDynamicScale = false;
             desc.msaaSamples = 1;

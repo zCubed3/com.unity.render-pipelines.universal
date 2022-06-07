@@ -38,7 +38,7 @@ namespace UnityEditor.Rendering.Universal
 
         // zCubed Additions
         public SerializedProperty renderVolumetrics;
-        public SerializedProperty volumetricsDownsampling;
+        public SerializedProperty volumetricsPercent;
         public SerializedProperty volumetricsSlices;
         public SerializedProperty volumetricsSteps;
         public SerializedProperty volumetricsFar;
@@ -110,7 +110,7 @@ namespace UnityEditor.Rendering.Universal
 
             // zCubed Additions
             renderVolumetrics = serializedAdditionalDataObject.FindProperty("m_RenderVolumetrics");
-            volumetricsDownsampling = serializedAdditionalDataObject.FindProperty("m_VolumetricsDownsampling");
+            volumetricsPercent = serializedAdditionalDataObject.FindProperty("m_VolumetricsPercent");
             volumetricsSlices = serializedAdditionalDataObject.FindProperty("m_VolumetricsSlices");
             volumetricsSteps = serializedAdditionalDataObject.FindProperty("m_VolumetricsSteps");
             volumetricsFar = serializedAdditionalDataObject.FindProperty("m_VolumetricsFar");

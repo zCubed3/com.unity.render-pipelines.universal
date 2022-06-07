@@ -585,11 +585,11 @@ namespace UnityEngine.Rendering.Universal
             set => m_RenderVolumetrics = value;
         }
 
-        [SerializeField] int m_VolumetricsDownsampling = 1;
-        public int volumetricsDownsampling
+        [SerializeField] float m_VolumetricsPercent = 0.35f;
+        public float volumetricsPercent
         {
-            get => m_VolumetricsDownsampling;
-            set => m_VolumetricsDownsampling = value;
+            get => m_VolumetricsPercent;
+            set => m_VolumetricsPercent = value;
         }
 
         [SerializeField] int m_VolumetricsSlices = 128;
