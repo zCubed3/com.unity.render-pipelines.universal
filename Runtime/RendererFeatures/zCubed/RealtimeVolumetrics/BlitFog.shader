@@ -71,24 +71,41 @@ Shader "zCubed/Volumetrics/BlitFog"
                     return 0;
                 #endif
 
-                #define MULTISAMPLE
+                #define BLUR
 
-                #ifdef MULTISAMPLE
-                const float2 radius = float2(0.005, 0.005);
+                #ifdef BLUR
+                // _MainTex texel size was wrong!
+                uint width, height;
+                _MainTex.GetDimensions(width, height);
+                float4 texelSize = float4(1.0 / width, 1.0 / height, 0, 0);
 
+                // 5 x 5
+                // https://www.researchgate.net/figure/Discrete-approximation-of-the-Gaussian-kernels-3x3-5x5-7x7_fig2_325768087
+                const float WEIGHTS[25] = {
+                    1 / 273.0, 4 / 273.0, 7 / 273.0, 4 / 273.0, 1 / 273.0,
+                    4 / 273.0, 16 / 273.0, 26 / 273.0, 16 / 273.0, 4 / 273.0,
+                    7 / 273.0, 26 / 273.0, 41 / 273.0, 26 / 273.0, 7 / 273.0,
+                    4 / 273.0, 16 / 273.0, 26 / 273.0, 16 / 273.0, 4 / 273.0,
+                    1 / 273.0, 4 / 273.0, 7 / 273.0, 4 / 273.0, 1 / 273.0
+                };
+
+                const float RADIUS = 1.5;
+
+                // Because of texel rounding, we need to shift the uv slightly
+                uv += texelSize * 0.5;
+
+                [unroll]
                 for (int r = 0; r < 5; r++) {
-                    float ud = radius.y * (r - 1);
-            
-                    float3 l00 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + float2(-radius.x, ud));
-                    float3 l01 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + float2(-radius.x / 2, ud));
-                    float3 l02 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + float2(0, ud));
-                    float3 l03 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + float2(radius.x / 2, ud));
-                    float3 l04 = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + float2(radius.x, ud));
-            
-                    fog += l00 + l01 + l02 + l03 + l04;
+                    float yShift = ((((r + 1) / 5.0) - 0.5) * 2) * texelSize.y * RADIUS;
+
+                    [unroll]
+                    for (int c = 0; c < 5; c++) {
+                        float xShift = ((((c + 1) / 5.0) - 0.5) * 2) * texelSize.x * RADIUS;
+
+                        fog += SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv + float2(xShift, yShift)) * WEIGHTS[r * 5 + c];
+                    }
                 }
-            
-                fog /= 5 * 5;
+
                 #else
                 fog = SAMPLE_TEXTURE2D_X(_MainTex, sampler_MainTex, uv);
                 #endif
