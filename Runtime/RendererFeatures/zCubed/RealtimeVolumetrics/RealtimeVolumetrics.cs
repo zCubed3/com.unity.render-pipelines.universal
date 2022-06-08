@@ -23,7 +23,7 @@ namespace UnityEngine.Rendering.Universal.Additions
         public override void Create()
         {
             fogPass = new RealtimeVolumetricsPass();
-            fogPass.renderPassEvent = RenderPassEvent.AfterRenderingTransparents;
+            fogPass.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
         }
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
