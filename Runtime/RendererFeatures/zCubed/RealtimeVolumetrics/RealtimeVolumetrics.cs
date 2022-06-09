@@ -35,7 +35,7 @@ namespace UnityEngine.Rendering.Universal.Additions
                 Debug.LogError("Please assign a compute shader to the Volumetric Pass!");
 
             if (!fogPass.blendMaterial)
-                fogPass.blendMaterial = new Material(settings.blendShader == null ? Shader.Find("zCubed/Volumetrics/BlitFog") : settings.blendShader);
+                fogPass.blendMaterial = new Material(settings.blendShader == null ? Shader.Find("PrismaRP/Volumetrics/FogCompositor") : settings.blendShader);
 
             if (fogPass.blendMaterial == null)
                 Debug.LogError("Please assign a blending shader to the Volumetric Pass!");

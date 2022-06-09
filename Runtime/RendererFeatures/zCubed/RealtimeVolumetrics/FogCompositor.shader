@@ -1,4 +1,4 @@
-Shader "zCubed/Volumetrics/BlitFog"
+Shader "PrismaRP/Volumetrics/FogCompositor"
 {
     Properties
     {

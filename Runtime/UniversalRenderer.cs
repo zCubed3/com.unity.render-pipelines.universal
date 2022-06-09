@@ -516,7 +516,8 @@ namespace UnityEngine.Rendering.Universal
 
             // zCubed Additions
             // zCubed: Unity wasn't allocating a depth texture!
-            createDepthTexture = true;
+            if (cameraData.cameraTargetDescriptor.msaaSamples == 1)
+                createDepthTexture = true;
 
 #if UNITY_ANDROID || UNITY_WEBGL
             if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.Vulkan)
