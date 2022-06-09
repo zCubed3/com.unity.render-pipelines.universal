@@ -153,7 +153,7 @@ void VolumetricMain (uint3 id : SV_DispatchThreadID)
         if (_MainLightShadowParams.x > 0)
            shadow = _MainShadowmap.SampleCmpLevelZero(sampler_MainShadowmap, shadowPoint.xy, shadowPoint.z);
     
-        float params = _MainLightFogParams;
+        float4 params = _MainLightFogParams;
 
         float LDotV = saturate(dot(-_MainLightPosition.xyz, sRay.direction));
         LDotV = params.x <= 0.0 ? 1.0 : pow(LDotV, params.x);
