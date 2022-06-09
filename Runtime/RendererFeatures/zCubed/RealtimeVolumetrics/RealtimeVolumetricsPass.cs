@@ -33,7 +33,8 @@ namespace UnityEngine.Rendering.Universal.Additions
             public static readonly int _Result = Shader.PropertyToID("_Result");
 
             public static readonly int _FogParams = Shader.PropertyToID("_FogParams");
-            public static readonly int _FogSteps = Shader.PropertyToID("_FogSteps");
+
+            public static readonly int _DepthMSAA = Shader.PropertyToID("_DepthMSAA");
 
             public static readonly int _PassData = Shader.PropertyToID("_PassData");
 
@@ -47,6 +48,8 @@ namespace UnityEngine.Rendering.Universal.Additions
 
         RenderTargetIdentifier fogIdent;
         int fogWidth, fogHeight;
+
+        int depthMSAA = 1;
 
         MainLightShadowCasterPass mainLightPass;
         AdditionalLightsShadowCasterPass additionalLightPass;
@@ -106,6 +109,8 @@ namespace UnityEngine.Rendering.Universal.Additions
             cmd.GetTemporaryRT(FOG_TEX_ID, desc, FilterMode.Bilinear);
             fogIdent = new RenderTargetIdentifier(FOG_TEX_ID);
 
+            depthMSAA = renderingData.cameraData.cameraTargetDescriptor.msaaSamples;
+
             fogWidth = desc.width;
             fogHeight = desc.height;
         }
@@ -139,7 +144,6 @@ namespace UnityEngine.Rendering.Universal.Additions
             cmd.SetComputeTextureParam(computeShader, kernel, Properties._Result, fogIdent);
 
             cmd.SetComputeVectorParam(computeShader, Properties._PassData, new Vector4(fogWidth, fogHeight, 0, 0));
-            cmd.SetGlobalVector(Properties._PassData, new Vector4(fogWidth, fogHeight, 0, additionalCameraData.volumetricsSteps));
 
             Matrix4x4 camToWorld;
             Matrix4x4 worldToCam;
@@ -292,8 +296,35 @@ namespace UnityEngine.Rendering.Universal.Additions
             // If we're doing XR rendering we need to dispatch twice and blit twice
             cmd.DispatchCompute(computeShader, kernel, tilesX, tilesY, tilesZ);
 
-            // Blit alternative for XR
-            cmd.SetGlobalInt(Properties._FogSteps, additionalCameraData.volumetricsSteps);
+            switch (depthMSAA)
+            {
+                case 8:
+                    cmd.DisableShaderKeyword("_DEPTH_MSAA_2");
+                    cmd.DisableShaderKeyword("_DEPTH_MSAA_4");
+                    cmd.EnableShaderKeyword("_DEPTH_MSAA_8");
+                    break;
+
+                case 4:
+                    cmd.DisableShaderKeyword("_DEPTH_MSAA_2");
+                    cmd.EnableShaderKeyword("_DEPTH_MSAA_4");
+                    cmd.DisableShaderKeyword("_DEPTH_MSAA_8");
+                    break;
+
+                case 2:
+                    cmd.EnableShaderKeyword("_DEPTH_MSAA_2");
+                    cmd.DisableShaderKeyword("_DEPTH_MSAA_4");
+                    cmd.DisableShaderKeyword("_DEPTH_MSAA_8");
+                    break;
+
+                // MSAA disabled, auto resolve supported or ms textures not supported
+                default:
+                    cmd.DisableShaderKeyword("_DEPTH_MSAA_2");
+                    cmd.DisableShaderKeyword("_DEPTH_MSAA_4");
+                    cmd.DisableShaderKeyword("_DEPTH_MSAA_8");
+                    break;
+            }
+
+            cmd.SetGlobalVector(Properties._PassData, new Vector4(fogWidth, fogHeight, 0, additionalCameraData.volumetricsSteps));
             cmd.SetGlobalTexture(Properties._MainTex, fogIdent);
             cmd.SetGlobalTexture(Properties._SceneDepth, renderingData.cameraData.renderer.cameraDepthTarget);
             cmd.SetRenderTarget(new RenderTargetIdentifier(renderingData.cameraData.renderer.cameraColorTarget, 0, CubemapFace.Unknown, -1));
