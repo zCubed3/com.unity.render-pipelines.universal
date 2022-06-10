@@ -64,7 +64,10 @@ float4 _AdditionalLightsFogParams[MAX_VISIBLE_LIGHTS];
 //
 RWTexture3D<float4> _Result;
 
-float4 _PassData; // xy = Texture Dimensions
+Texture3D<float4> _FogBuffer;
+SamplerState sampler_FogBuffer;
+
+float4 _PassData; // xyz = Texture Dimensions
 float4 _FogParams; // x = Steps, y = Far, z = Density, w = Scattering
 
 //
@@ -128,17 +131,14 @@ half AngleAttenuation(half3 spotDirection, half3 lightDirection, half2 spotAtten
 [numthreads(8,8,8)]
 void VolumetricMain (uint3 id : SV_DispatchThreadID)
 {
-    uint width, height, depth;
-    _Result.GetDimensions(width, height, depth);
-    
-    float2 uv = float2((float) id.x / (float) width, (float)id.y / (float)height);
-    float slice = (float) id.z / (float) depth;
+    float2 uv = id.xy / _PassData.xy;
+    float slice = id.z / _PassData.z;
     
     float2 coords = (uv - 0.5) * 2.0;
     Ray sRay = RayFromViewpoint(coords);
 
     float3 sStart = sRay.origin;
-    float3 sEnd = sStart + sRay.direction * _FogParams.y;
+    float3 sEnd = sStart + sRay.direction * _FogParams.y; 
     
     float3 sampled = 0;
         

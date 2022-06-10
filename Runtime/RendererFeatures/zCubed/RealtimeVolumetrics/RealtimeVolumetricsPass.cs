@@ -30,6 +30,7 @@ namespace UnityEngine.Rendering.Universal.Additions
             public static readonly int _AdditionalLightsFogParams = Shader.PropertyToID("_AdditionalLightsFogParams");
 
             public static readonly int _SceneDepth = Shader.PropertyToID("_SceneDepth");
+            public static readonly int _FogBuffer = Shader.PropertyToID("_FogBuffer");
             public static readonly int _Result = Shader.PropertyToID("_Result");
 
             public static readonly int _FogParams = Shader.PropertyToID("_FogParams");
@@ -141,9 +142,7 @@ namespace UnityEngine.Rendering.Universal.Additions
             else
                 cmd.DisableKeyword(computeShader, xrKeyword);
 
-            cmd.SetComputeTextureParam(computeShader, kernel, Properties._Result, fogIdent);
-
-            cmd.SetComputeVectorParam(computeShader, Properties._PassData, new Vector4(fogWidth, fogHeight, 0, 0));
+            cmd.SetComputeVectorParam(computeShader, Properties._PassData, new Vector4(fogWidth, fogHeight, additionalCameraData.volumetricsSlices, 0));
 
             Matrix4x4 camToWorld;
             Matrix4x4 worldToCam;
@@ -294,6 +293,7 @@ namespace UnityEngine.Rendering.Universal.Additions
 
             // I know this isn't good for performance but it's the best option for right now!
             // If we're doing XR rendering we need to dispatch twice and blit twice
+            cmd.SetComputeTextureParam(computeShader, kernel, Properties._Result, fogIdent);
             cmd.DispatchCompute(computeShader, kernel, tilesX, tilesY, tilesZ);
 
             switch (depthMSAA)

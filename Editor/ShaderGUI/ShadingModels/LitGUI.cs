@@ -152,12 +152,26 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
                 clearCoatSmoothness = BaseShaderGUI.FindProperty("_ClearCoatSmoothness", properties, false);
 
                 // zCubed Additions
-                brdfMap = BaseShaderGUI.FindProperty("_BRDFMap", properties);
-                packingMode = BaseShaderGUI.FindProperty("_PackingMode", properties);
-                bumpToOcclusionProp = BaseShaderGUI.FindProperty("_BumpToOcclusion", properties);
-                emissionFalloffProp = BaseShaderGUI.FindProperty("_EmissionFalloff", properties);
-                emissionMultiplyProp = BaseShaderGUI.FindProperty("_EmissionMultiply", properties);
-                occlusionContributionProp = BaseShaderGUI.FindProperty("_OcclusionContribution", properties);
+
+                // Temp fix for my additions
+                try
+                {
+                    brdfMap = BaseShaderGUI.FindProperty("_BRDFMap", properties);
+                    packingMode = BaseShaderGUI.FindProperty("_PackingMode", properties);
+                    bumpToOcclusionProp = BaseShaderGUI.FindProperty("_BumpToOcclusion", properties);
+                    emissionFalloffProp = BaseShaderGUI.FindProperty("_EmissionFalloff", properties);
+                    emissionMultiplyProp = BaseShaderGUI.FindProperty("_EmissionMultiply", properties);
+                    occlusionContributionProp = BaseShaderGUI.FindProperty("_OcclusionContribution", properties);
+                }
+                catch 
+                {
+                    brdfMap = null;
+                    packingMode = null;
+                    bumpToOcclusionProp = null;
+                    emissionFalloffProp = null;
+                    emissionMultiplyProp = null;
+                    occlusionContributionProp = null;
+                }
             }
         }
 
