@@ -149,7 +149,7 @@ namespace UnityEngine.Rendering.Universal
         }
 
         [Tooltip("Changes the volumetric intensity of this light.")]
-        [SerializeField] float m_VolumetricsIntensity = 1.0f;
+        [SerializeField][Min(0F)] float m_VolumetricsIntensity = 1.0f;
         public float volumetricsIntensity
         {
             get => m_VolumetricsIntensity;
@@ -157,7 +157,7 @@ namespace UnityEngine.Rendering.Universal
         }
 
         [Tooltip("How exponential the scattering appears.")]
-        [SerializeField] float m_VolumetricsPower = 1.0f;
+        [SerializeField][Min(0F)] float m_VolumetricsPower = 1.0f;
         public float volumetricsPower
         {
             get => m_VolumetricsPower;

@@ -53,9 +53,6 @@ Shader "PrismaRP/Volumetrics/FogCompositor"
                 return o;
             }
 
-            Texture3D _MainTex;
-            SAMPLER(sampler_MainTex);
-
             #pragma multi_compile _ _DEPTH_MSAA_2 _DEPTH_MSAA_4 _DEPTH_MSAA_8
             #pragma multi_compile _ _USE_DRAW_PROCEDURAL
 
@@ -97,19 +94,28 @@ Shader "PrismaRP/Volumetrics/FogCompositor"
 
             CBUFFER_START(FOG_SETTINGS);
 
-            float4x4 _CameraToWorld;
-            float4x4 _WorldToCamera;
-            float4x4 _Projection;
-            float4x4 _InverseProjection;
+            float4x4 _CameraToWorld[2];
+            float4x4 _WorldToCamera[2];
+            float4x4 _Projection[2];
+            float4x4 _InverseProjection[2];
             float4 _FogParams;
             float4 _PassData;
 
             CBUFFER_END
 
+            Texture3D _MainTex;
+            SAMPLER(sampler_MainTex);
+
+            Texture3D _MainTexOther;
+            SAMPLER(sampler_MainTexOther);
+
+            SAMPLER(sampler_LinearClamp);
+            SAMPLER(sampler_PointClamp);
+
             float SampleDepth(float2 uv)
             {
             #if MSAA_SAMPLES == 1
-                return SAMPLE_TEXTURE2D(_SceneDepth, sampler_SceneDepth, uv).r;
+                return SAMPLE_TEXTURE2D_X(_SceneDepth, sampler_SceneDepth, uv).r;
             #else
                 int2 coord = int2(uv * _SceneDepth_TexelSize.zw);
                 float outDepth = DEPTH_DEFAULT_VALUE;
@@ -125,32 +131,23 @@ Shader "PrismaRP/Volumetrics/FogCompositor"
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 
-                #ifdef UNITY_STEREO_INSTANCING_ENABLED
-                if (_PassData.z != unity_StereoEyeIndex)
-                    return 0;
-                #endif
-
                 float2 uv = i.uv;
                 float2 coords = (uv - 0.5) * 2.0;
 
-                float2 texel = 1.0 / _PassData.xy;
-
                 // Project screen coordinates back into world space
                 float d = SampleDepth(uv);
-                float4 clipPos = float4(coords, d, 1.0);
-                float4 viewPos = mul(_Projection, clipPos);
-                viewPos /= viewPos.w;
-                float3 wPos = mul(_CameraToWorld, viewPos).xyz;
 
                 float3 sStart = _WorldSpaceCameraPos;
-                float3 sEnd = mul(_InverseProjection, float4(coords, 0, 1)).xyz;
-                sEnd = mul(_CameraToWorld, float4(sEnd, 0)).xyz;
-                sEnd = sStart + normalize(sEnd) * _FogParams.y;
-
-                float3 sVector = sStart - wPos;
-                float sOcclude = dot(sVector, sVector);
+                float3 oPoint = ComputeWorldSpacePosition(uv, d, UNITY_MATRIX_I_VP);
+            
+                float3 oVec = oPoint - sStart;
+                float3 sEnd = normalize(oVec) * _FogParams.y; 
+                sEnd += sStart;
+                
+                float oFar = dot(oVec, oVec);
 
                 float per = 1.0 / _PassData.w;
+                float2 texel = 1.0 / _PassData.xy;
 
                 half3 fog = (0).rrr;
                 uv += texel * 0.5;
@@ -160,14 +157,23 @@ Shader "PrismaRP/Volumetrics/FogCompositor"
                     float s = per * f;
 
                     float3 sPoint = lerp(sStart, sEnd, s * s);
-                    float3 sVector = sStart - sPoint;
+                    float3 sVec = sPoint - sStart;
 
-                    if (dot(sVector, sVector) > sOcclude)
+                    if (dot(sVec, sVec) >= oFar)
                         break;
 
-                    fog += _MainTex.Sample(sampler_MainTex, float3(uv, per * f)).rgb * per;
+                #if defined(UNITY_STEREO_INSTANCING_ENABLED)
+                    UNITY_BRANCH
+                    if (unity_StereoEyeIndex == 0)
+                        fog += _MainTex.Sample(sampler_LinearClamp, float3(uv, s)).rgb * per;
+                    else
+                        fog += _MainTexOther.Sample(sampler_LinearClamp, float3(uv, s)).rgb * per;
+                #else
+                    fog += _MainTex.Sample(sampler_LinearClamp, float3(uv, s)).rgb * per;
+                #endif
                 }
 
+                //return half4(sEnd, 1);
                 //return half4(d.rrr, 1);
                 return half4(fog, 1);
             }

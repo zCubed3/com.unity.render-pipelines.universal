@@ -9,10 +9,10 @@
 //
 CBUFFER_START(VOLUMETRICS_CAMERA_DATA)
 
-float4x4 _CameraToWorld;
-float4x4 _WorldToCamera;
-float4x4 _Projection;
-float4x4 _InverseProjection;
+float4x4 _CameraToWorld[2];
+float4x4 _WorldToCamera[2];
+float4x4 _Projection[2];
+float4x4 _InverseProjection[2];
 
 CBUFFER_END
 
@@ -22,14 +22,14 @@ struct Ray
     float3 direction;
 };
 
-Ray RayFromViewpoint(float2 vPoint)
+Ray RayFromViewpoint(float2 vPoint, float4x4 cam2World, float4x4 invProj)
 {
     Ray ray;
     
-    ray.origin = mul(_CameraToWorld, float4(0, 0, 0, 1)).xyz;
+    ray.origin = mul(cam2World, float4(0, 0, 0, 1)).xyz;
 
-    ray.direction = mul(_InverseProjection, float4(vPoint, 0, 1)).xyz;
-    ray.direction = mul(_CameraToWorld, float4(ray.direction, 0)).xyz;
+    ray.direction = mul(invProj, float4(vPoint, 0, 1)).xyz;
+    ray.direction = mul(cam2World, float4(ray.direction, 0)).xyz;
     ray.direction = normalize(ray.direction);
 
     return ray;
@@ -63,6 +63,10 @@ float4 _AdditionalLightsFogParams[MAX_VISIBLE_LIGHTS];
 // Fog Inputs
 //
 RWTexture3D<float4> _Result;
+
+#ifdef UNITY_STEREO_INSTANCING_ENABLED
+RWTexture3D<float4> _ResultOther; // Used for the right eye
+#endif
 
 Texture3D<float4> _FogBuffer;
 SamplerState sampler_FogBuffer;
@@ -128,83 +132,121 @@ half AngleAttenuation(half3 spotDirection, half3 lightDirection, half2 spotAtten
 // TODO: Better shadow filtering
 // TODO: Soft / Hard shadow switching
 
-[numthreads(8,8,8)]
+[numthreads(32,32,1)]
 void VolumetricMain (uint3 id : SV_DispatchThreadID)
-{
+{    
     float2 uv = id.xy / _PassData.xy;
     float slice = id.z / _PassData.z;
     
     float2 coords = (uv - 0.5) * 2.0;
-    Ray sRay = RayFromViewpoint(coords);
 
-    float3 sStart = sRay.origin;
-    float3 sEnd = sStart + sRay.direction * _FogParams.y; 
+    #ifdef UNITY_STEREO_INSTANCING_ENABLED
+    Ray sRay[2] = { RayFromViewpoint(coords,_CameraToWorld[0], _InverseProjection[0]), RayFromViewpoint(coords,_CameraToWorld[1], _InverseProjection[1]) };
+    #else
+    Ray sRay = RayFromViewpoint(coords, _CameraToWorld[0], _InverseProjection[0]);
+    #endif
     
-    float3 sampled = 0;
-        
-    float3 sPoint = lerp(sStart, sEnd, slice * slice);
-
-    if (length(_MainLightColor) > 0.0)
+#ifdef UNITY_STEREO_INSTANCING_ENABLED
+    float3 output[2] = { (0).xxx, (0).xxx };
+#else
+    float3 output = 0;
+#endif
+    
+#ifdef UNITY_STEREO_INSTANCING_ENABLED
+    const int EYES = 2;
+#else
+    const int EYES = 1;
+#endif
+    
+    [unroll]
+    for (int s = 0; s < EYES; s++)
     {
-        float3 shadowPoint = mul(_MainLightWorldToShadow[0], float4(sPoint, 1)).xyz;
-
-        float shadow = 1;
+#ifdef UNITY_STEREO_INSTANCING_ENABLED
+        float3 sStart = sRay[s].origin;
+        float3 sEnd = sStart + sRay[s].direction * _FogParams.y;
+        float3 sDir = sRay[s].direction;
+#else
+        float3 sStart = sRay.origin;
+        float3 sEnd = sStart + sRay.direction * _FogParams.y;
+        float3 sDir = sRay.direction;
+#endif
         
-        if (_MainLightShadowParams.x > 0)
-           shadow = _MainShadowmap.SampleCmpLevelZero(sampler_MainShadowmap, shadowPoint.xy, shadowPoint.z);
-    
-        float4 params = _MainLightFogParams;
+        float3 sPoint = lerp(sStart, sEnd, slice * slice);
 
-        float LDotV = saturate(dot(-_MainLightPosition.xyz, sRay.direction));
-        LDotV = params.x <= 0.0 ? 1.0 : pow(LDotV, params.x);
-
-        float fac = saturate(MieScattering(LDotV, _FogParams.w)) * shadow;
-            
-        sampled += _MainLightColor.xyz * _FogParams.z * fac;
-    }
-    
-    [loop]
-    for (int l = 0; l < _AdditionalLightsCount.x; l++)
-    {
-        float4 lAtten = _AdditionalLightsAttenuation[l];
-        float4 lSpotDir = _AdditionalLightsSpotDir[l];
+        float3 sampled = 0;
         
-        float3 lVector = _AdditionalLightsPosition[l].xyz - sPoint * _AdditionalLightsPosition[l].w;
-        float dSqr = max(dot(lVector, lVector), 0.0);
-
-        half3 lDir = half3(lVector * rsqrt(dSqr));
-        half attenuation = half(DistanceAttenuation(dSqr, lAtten.xy) * AngleAttenuation(lSpotDir.xyz, lDir, lAtten.zw));
-        
-        float4 shadowParams = _AdditionalShadowParams[l];
-        int shadowSliceIndex = shadowParams.w;
-        
-        float shadow;
-        if (shadowSliceIndex >= 0)
+        if (length(_MainLightColor) > 0.0)
         {
-            if (shadowParams.z)
-            {
-                float cubemapFaceId = CubeMapFaceID(-lDir);
-                shadowSliceIndex += cubemapFaceId;
-            }
+            float3 shadowPoint = mul(_MainLightWorldToShadow[0], float4(sPoint, 1)).xyz;
+
+            float shadow = 1;
+        
+            if (_MainLightShadowParams.x > 0)
+                shadow = _MainShadowmap.SampleCmpLevelZero(sampler_MainShadowmap, shadowPoint.xy, shadowPoint.z);
+    
+            float4 params = _MainLightFogParams;
+
+            float LDotV = saturate(dot(-_MainLightPosition.xyz, sDir));
+            LDotV = params.x <= 0.0 ? 1.0 : pow(LDotV, params.x);
+
+            float fac = saturate(MieScattering(LDotV, _FogParams.w)) * shadow;
             
-            float4 shadowPoint = mul(_AdditionalLightsWorldToShadow[shadowSliceIndex], float4(sPoint, 1));
-            shadowPoint.xyz /= shadowPoint.w;
-            
-            shadow = _AdditionalShadowmap.SampleCmpLevelZero(sampler_AdditionalShadowmap, shadowPoint.xy, shadowPoint.z);
+            sampled += _MainLightColor.xyz * _FogParams.z * fac;
         }
-        else
-            shadow = 1;
+    
+        [loop]
+        for (int l = 0; l < _AdditionalLightsCount.x; l++)
+        {
+            float4 lAtten = _AdditionalLightsAttenuation[l];
+            float4 lSpotDir = _AdditionalLightsSpotDir[l];
         
-        float4 params = _AdditionalLightsFogParams[l];
+            float3 lVector = _AdditionalLightsPosition[l].xyz - sPoint * _AdditionalLightsPosition[l].w;
+            float dSqr = max(dot(lVector, lVector), 0.0);
+
+            half3 lDir = half3(lVector * rsqrt(dSqr));
+            half attenuation = half(DistanceAttenuation(dSqr, lAtten.xy) * AngleAttenuation(lSpotDir.xyz, lDir, lAtten.zw));
         
-        float LDotV = saturate(dot(lDir, sRay.direction));
-        LDotV = params.x <= 0.0 ? 1.0 : pow(LDotV, params.x);
+            float4 shadowParams = _AdditionalShadowParams[l];
+            int shadowSliceIndex = shadowParams.w;
         
-        float fac = saturate(MieScattering(LDotV, _FogParams.w)) * attenuation * shadow;
+            float shadow;
+            if (shadowSliceIndex >= 0)
+            {
+                if (shadowParams.z)
+                {
+                    float cubemapFaceId = CubeMapFaceID(-lDir);
+                    shadowSliceIndex += cubemapFaceId;
+                }
+            
+                float4 shadowPoint = mul(_AdditionalLightsWorldToShadow[shadowSliceIndex], float4(sPoint, 1));
+                shadowPoint.xyz /= shadowPoint.w;
+            
+                shadow = _AdditionalShadowmap.SampleCmpLevelZero(sampler_AdditionalShadowmap, shadowPoint.xy, shadowPoint.z);
+            }
+            else
+                shadow = 1;
         
-        sampled += _AdditionalLightsColor[l].xyz * _FogParams.z * fac;
+            float4 params = _AdditionalLightsFogParams[l];
+        
+            float LDotV = saturate(dot(lDir, sDir));
+            LDotV = params.x <= 0.0 ? 1.0 : pow(LDotV, params.x);
+        
+            float fac = saturate(MieScattering(LDotV, _FogParams.w)) * attenuation * shadow;
+        
+            sampled += _AdditionalLightsColor[l].xyz * _FogParams.z * fac;
+        }
+        
+#ifdef UNITY_STEREO_INSTANCING_ENABLED
+        output[s] = sampled;
+#else
+        output = sampled;
+#endif
     }
 
-    _Result[id.xyz] = float4(sampled, 1);
-    //_Result[id.xyz] = float4(sPoint, 1);
+#ifdef UNITY_STEREO_INSTANCING_ENABLED
+    _Result[id.xyz] = float4(output[0], 1);
+    _ResultOther[id.xyz] = float4(output[1], 1);
+#else
+    _Result[id.xyz] = float4(output, 1);
+#endif
 }
