@@ -57,7 +57,7 @@ namespace UnityEngine.Rendering.Universal.Additions
         AdditionalLightsShadowCasterPass additionalLightPass;
 
         const int FOG_TEX_ID = 2000, FOG_TEX_OTHER_ID = 2001;
-        const int TILE_SIZE = 32;
+        const int TILE_SIZE = 8;
 
         //
         // Properties
@@ -96,10 +96,8 @@ namespace UnityEngine.Rendering.Universal.Additions
 
             RenderTextureDescriptor desc = renderingData.cameraData.cameraTargetDescriptor;
 
-            //desc.width = Mathf.CeilToInt((float)desc.width * additionalCameraData.volumetricsPercent);
-            //desc.height = Mathf.CeilToInt((float)desc.height * additionalCameraData.volumetricsPercent);
-            desc.width = 128;
-            desc.height = 128;
+            desc.width = Mathf.CeilToInt((float)desc.width * additionalCameraData.volumetricsPercent);
+            desc.height = Mathf.CeilToInt((float)desc.height * additionalCameraData.volumetricsPercent);
             desc.volumeDepth = additionalCameraData.volumetricsSlices;
 
             // We need our own specific buffer
@@ -139,7 +137,7 @@ namespace UnityEngine.Rendering.Universal.Additions
 
             int tilesX = Mathf.CeilToInt((float)fogWidth / TILE_SIZE);
             int tilesY = Mathf.CeilToInt((float)fogHeight / TILE_SIZE);
-            int tilesZ = additionalCameraData.volumetricsSlices;
+            int tilesZ = Mathf.CeilToInt((float)additionalCameraData.volumetricsSlices / TILE_SIZE);
 
             var xrKeyword = new LocalKeyword(computeShader, "UNITY_STEREO_INSTANCING_ENABLED");
             cmd.SetComputeFloatParam(computeShader, Properties._EyeIndex, 0);

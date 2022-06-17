@@ -132,7 +132,7 @@ half AngleAttenuation(half3 spotDirection, half3 lightDirection, half2 spotAtten
 // TODO: Better shadow filtering
 // TODO: Soft / Hard shadow switching
 
-[numthreads(32,32,1)]
+[numthreads(8,8,8)]
 void VolumetricMain (uint3 id : SV_DispatchThreadID)
 {    
     float2 uv = id.xy / _PassData.xy;
