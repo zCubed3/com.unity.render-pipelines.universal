@@ -1,0 +1,36 @@
+#pragma kernel CSMain
+
+#pragma multi_compile_local _ QUALITY_MEDIUM QUALITY_HIGH QUALITY_ULTRA
+
+RWTexture3D<float4> _Result;
+RWTexture3D<float4> _MainTex;
+
+SamplerState sampler_LinearClamp;
+SamplerState sampler_PointClamp;
+SamplerState sampler_LinearRepeat;
+
+float4 _PassData;
+float4 _NoiseData;
+
+#if defined(QUALITY_ULTRA)
+#define SLICES 128
+#elif defined(QUALITY_HIGH)
+#define SLICES 96
+#elif defined(QUALITY_MEDIUM)
+#define SLICES 64
+#else
+#define SLICES 32
+#endif
+
+[numthreads(32, 32, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    float4 sum = 0;
+    for (int s = 0; s < SLICES; s++)
+    {
+        float4 sample = _MainTex[uint3(id.xy, s)];
+        sum += sample / float(SLICES);
+        
+        _Result[uint3(id.xy, s)] = sum;
+    }
+}

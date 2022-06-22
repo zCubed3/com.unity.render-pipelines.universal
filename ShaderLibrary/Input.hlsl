@@ -128,6 +128,11 @@ half4 _AdditionalLightsAttenuation[MAX_VISIBLE_LIGHTS];
 half4 _AdditionalLightsSpotDir[MAX_VISIBLE_LIGHTS];
 half4 _AdditionalLightsOcclusionProbes[MAX_VISIBLE_LIGHTS];
 float _AdditionalLightsLayerMasks[MAX_VISIBLE_LIGHTS]; // we want uint[] but Unity api does not support it.
+
+// zCubed Additions
+half4 _AdditionalLightsShapeParams[MAX_VISIBLE_LIGHTS];
+// ================
+
 #ifndef SHADER_API_GLES3
 CBUFFER_END
 #endif

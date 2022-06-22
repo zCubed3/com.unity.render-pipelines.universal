@@ -34,6 +34,9 @@ namespace UnityEditor.Rendering.Universal
         public SerializedProperty volumetricsIntensity { get; }
         public SerializedProperty volumetricsPower { get; }
 
+        public SerializedProperty specularRadius { get; }
+        // ================
+
 
         /// <summary>Method that updates the <see cref="SerializedObject"/> of the Light and the Additional Light Data</summary>
         public void Update()
@@ -80,6 +83,8 @@ namespace UnityEditor.Rendering.Universal
             volumetricsSyncIntensity = serializedAdditionalDataObject.FindProperty("m_VolumetricsSyncIntensity");
             volumetricsIntensity = serializedAdditionalDataObject.FindProperty("m_VolumetricsIntensity");
             volumetricsPower = serializedAdditionalDataObject.FindProperty("m_VolumetricsPower");
+
+            specularRadius = serializedAdditionalDataObject.FindProperty("m_SpecularRadius");
 
             settings.ApplyModifiedProperties();
         }

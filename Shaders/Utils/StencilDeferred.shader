@@ -232,6 +232,8 @@ Shader "Hidden/Universal Render Pipeline/StencilDeferred"
                 }
             #endif
         #endif
+
+        unityLight.specularDirection = unityLight.direction;
         return unityLight;
     }
 

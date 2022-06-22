@@ -116,7 +116,7 @@ namespace UnityEditor.Rendering.Universal
         {
             public static GUIContent RenderVolumetrics = new GUIContent("Render Volumetrics", "Should this camera render a volumetrics pass?");
             public static GUIContent VolumetricsPercent = new GUIContent("Percent", "Relative to screen resolution, how much should we reduce the resolution?");
-            public static GUIContent VolumetricsSlices = new GUIContent("Slices", "How deep is the volumetric buffer? (on the Z axis)");
+            public static GUIContent VolumetricsQuality = new GUIContent("Quality", "What resolution is the volumetric buffer? (on the Z axis)");
             public static GUIContent VolumetricsSteps = new GUIContent("Steps", "How many steps do we take through the volumetric buffer from front to back?");
             public static GUIContent VolumetricsFar = new GUIContent("Far", "How far should volumetrics be rendered out in front of the view?");
             public static GUIContent VolumetricsDensity = new GUIContent("Density", "How dense is the fog? (color * density)");
@@ -135,12 +135,8 @@ namespace UnityEditor.Rendering.Universal
                 EditorGUILayout.Slider(p.volumetricsPercent, 0, 1, VolumetricsStyles.VolumetricsPercent);
                 EditorGUILayout.Space();
 
-                EditorGUILayout.LabelField($"Slices = 3D Texture Depth, Example: (16 = 240x135x{p.volumetricsSlices.intValue})");
-                EditorGUILayout.PropertyField(p.volumetricsSlices, VolumetricsStyles.VolumetricsSlices);
-                EditorGUILayout.Space();
-
-                EditorGUILayout.LabelField($"Steps = Fog Compositor Steps");
-                EditorGUILayout.PropertyField(p.volumetricsSteps, VolumetricsStyles.VolumetricsSteps);
+                EditorGUILayout.LabelField($"Quality = Fog Buffer Quality (32 / 64 / 96 / 128)");
+                EditorGUILayout.PropertyField(p.volumetricsQuality, VolumetricsStyles.VolumetricsQuality);
                 EditorGUILayout.Space();
 
                 EditorGUILayout.PropertyField(p.volumetricsFar, VolumetricsStyles.VolumetricsFar);

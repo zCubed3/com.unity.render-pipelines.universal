@@ -626,6 +626,13 @@ namespace UnityEngine.Rendering.Universal
             get => m_VolumetricsScattering;
             set => m_VolumetricsScattering = value;
         }
+
+        [SerializeField] Additions.RealtimeVolumetrics.BufferQuality m_VolumetricsQuality = Additions.RealtimeVolumetrics.BufferQuality.Medium;
+        public Additions.RealtimeVolumetrics.BufferQuality volumetricsQuality
+        {
+            get => m_VolumetricsQuality;
+            set => m_VolumetricsQuality = value;
+        }
         // ================
 
         public void OnBeforeSerialize()

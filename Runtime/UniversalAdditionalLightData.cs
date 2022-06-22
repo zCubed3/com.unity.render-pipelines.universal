@@ -157,11 +157,19 @@ namespace UnityEngine.Rendering.Universal
         }
 
         [Tooltip("How exponential the scattering appears.")]
-        [SerializeField][Min(0F)] float m_VolumetricsPower = 1.0f;
+        [SerializeField] [Min(0F)] float m_VolumetricsPower = 1.0f;
         public float volumetricsPower
         {
             get => m_VolumetricsPower;
             set => m_VolumetricsPower = value;
+        }
+
+        [Tooltip("How large the 'orb' of the light is.")]
+        [SerializeField][Min(0F)] float m_SpecularRadius = 0.0f;
+        public float specularRadius
+        {
+            get => m_SpecularRadius;
+            set => m_SpecularRadius = value;
         }
         // ================
     }

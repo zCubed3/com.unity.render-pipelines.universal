@@ -39,7 +39,8 @@ half3 LightingSpecular(half3 lightColor, half3 lightDir, half3 normal, half3 vie
 // zCubed Additions
 // Modified physically based lighting function that accounts for AO better, the old method is forwarded to this now
 half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat,
-    half3 lightColor, half3 lightDirectionWS, half lightAttenuation,
+    half3 lightColor, half3 lightDirectionWS, half3 lightSpecularDirectionWS,
+    half lightAttenuation,
     half3 normalWS, half3 viewDirectionWS,
     half clearCoatMask, bool specularHighlightsOff, half4 occlusionContribution)
 {
@@ -59,7 +60,11 @@ half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat,
 #ifndef _SPECULARHIGHLIGHTS_OFF
     [branch] if (!specularHighlightsOff)
     {
-        brdf += brdfData.specular * DirectBRDFSpecular(brdfData, normalWS, lightDirectionWS, viewDirectionWS) * occlusionContribution.y;
+        //brdf += brdfData.specular * DirectBRDFSpecular(brdfData, normalWS, lightDirectionWS, viewDirectionWS) * occlusionContribution.y;
+
+        // zCubed Additions
+        brdf += brdfData.specular * DirectBRDFSpecular(brdfData, normalWS, lightSpecularDirectionWS, viewDirectionWS) * occlusionContribution.y;
+        // ===============
 
 #if defined(_CLEARCOAT) || defined(_CLEARCOATMAP)
         // Clear coat evaluates the specular a second time and has some common terms with the base specular.
@@ -83,11 +88,12 @@ half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat,
 }
 
 half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat,
-    half3 lightColor, half3 lightDirectionWS, half lightAttenuation,
+    half3 lightColor, half3 lightDirectionWS, half3 lightSpecularDirectionWS, 
+    half lightAttenuation,
     half3 normalWS, half3 viewDirectionWS,
     half clearCoatMask, bool specularHighlightsOff)
 {
-    return LightingPhysicallyBased(brdfData, brdfDataClearCoat, lightColor, lightDirectionWS, lightAttenuation, normalWS, viewDirectionWS, clearCoatMask, specularHighlightsOff, half4(1, 1, 1, 1));
+    return LightingPhysicallyBased(brdfData, brdfDataClearCoat, lightColor, lightDirectionWS, lightSpecularDirectionWS, lightAttenuation, normalWS, viewDirectionWS, clearCoatMask, specularHighlightsOff, half4(1, 1, 1, 1));
 }
 // ---------
 
@@ -142,19 +148,19 @@ half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat,
 // Version that takes a float AO factor
 half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat, Light light, half3 normalWS, half3 viewDirectionWS, half clearCoatMask, bool specularHighlightsOff, float occlusion)
 {
-    return LightingPhysicallyBased(brdfData, brdfDataClearCoat, light.color, light.direction, light.distanceAttenuation * light.shadowAttenuation, normalWS, viewDirectionWS, clearCoatMask, specularHighlightsOff, occlusion);
+    return LightingPhysicallyBased(brdfData, brdfDataClearCoat, light.color, light.direction, light.specularDirection, light.distanceAttenuation * light.shadowAttenuation, normalWS, viewDirectionWS, clearCoatMask, specularHighlightsOff, occlusion);
 }
 
 // Version that takes a half4 AO factor
 half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat, Light light, half3 normalWS, half3 viewDirectionWS, half clearCoatMask, bool specularHighlightsOff, half4 occlusion)
 {
-    return LightingPhysicallyBased(brdfData, brdfDataClearCoat, light.color, light.direction, light.distanceAttenuation * light.shadowAttenuation, normalWS, viewDirectionWS, clearCoatMask, specularHighlightsOff, occlusion);
+    return LightingPhysicallyBased(brdfData, brdfDataClearCoat, light.color, light.direction, light.specularDirection, light.distanceAttenuation * light.shadowAttenuation, normalWS, viewDirectionWS, clearCoatMask, specularHighlightsOff, occlusion);
 }
 //
 
 half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat, Light light, half3 normalWS, half3 viewDirectionWS, half clearCoatMask, bool specularHighlightsOff)
 {
-    return LightingPhysicallyBased(brdfData, brdfDataClearCoat, light.color, light.direction, light.distanceAttenuation * light.shadowAttenuation, normalWS, viewDirectionWS, clearCoatMask, specularHighlightsOff);
+    return LightingPhysicallyBased(brdfData, brdfDataClearCoat, light.color, light.direction, light.specularDirection, light.distanceAttenuation * light.shadowAttenuation, normalWS, viewDirectionWS, clearCoatMask, specularHighlightsOff);
 }
 
 // Backwards compatibility

@@ -1,4 +1,4 @@
-Shader "PrismaRP/Volumetrics/FogCompositor"
+Shader "Hidden/Volumetrics/FogBlend"
 {
     Properties
     {
@@ -92,25 +92,13 @@ Shader "PrismaRP/Volumetrics/FogCompositor"
     #define DEPTH_OP max
 #endif
 
-            CBUFFER_START(FOG_SETTINGS);
-
-            float4x4 _CameraToWorld[2];
-            float4x4 _WorldToCamera[2];
-            float4x4 _Projection[2];
-            float4x4 _InverseProjection[2];
-            float4 _FogParams;
-            float4 _PassData;
-
-            CBUFFER_END
-
-            Texture3D _MainTex;
+            TEXTURE3D(_MainTex);
             SAMPLER(sampler_MainTex);
-
-            Texture3D _MainTexOther;
-            SAMPLER(sampler_MainTexOther);
 
             SAMPLER(sampler_LinearClamp);
             SAMPLER(sampler_PointClamp);
+
+            float4 _PassData;
 
             float SampleDepth(float2 uv)
             {
@@ -131,51 +119,18 @@ Shader "PrismaRP/Volumetrics/FogCompositor"
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 
-                float2 uv = i.uv;
-                float2 coords = (uv - 0.5) * 2.0;
+                [branch]
+                if (unity_StereoEyeIndex != _PassData.y)
+                    return 0;
 
-                // Project screen coordinates back into world space
-                float d = SampleDepth(uv);
+                // Position inside the volumetric texture is based on depth
+                // We need to get the depth relative to the far and clamp it
+                float d = SampleDepth(i.uv);
+                float dist = LinearEyeDepth(d, _ZBufferParams);
 
-                float3 sStart = _WorldSpaceCameraPos;
-                float3 oPoint = ComputeWorldSpacePosition(uv, d, UNITY_MATRIX_I_VP);
-            
-                float3 oVec = oPoint - sStart;
-                float3 sEnd = normalize(oVec) * _FogParams.y; 
-                sEnd += sStart;
-                
-                float oFar = dot(oVec, oVec);
+                float p = saturate(dist / _PassData.x);
 
-                float per = 1.0 / _PassData.w;
-                float2 texel = 1.0 / _PassData.xy;
-
-                half3 fog = (0).rrr;
-                uv += texel * 0.5;
-
-                [loop]
-                for (int f = 0; f < _PassData.w; f++) {
-                    float s = per * f;
-
-                    float3 sPoint = lerp(sStart, sEnd, s * s);
-                    float3 sVec = sPoint - sStart;
-
-                    if (dot(sVec, sVec) >= oFar)
-                        break;
-
-                #if defined(UNITY_STEREO_INSTANCING_ENABLED)
-                    UNITY_BRANCH
-                    if (unity_StereoEyeIndex == 0)
-                        fog += _MainTex.Sample(sampler_LinearClamp, float3(uv, s)).rgb * per;
-                    else
-                        fog += _MainTexOther.Sample(sampler_LinearClamp, float3(uv, s)).rgb * per;
-                #else
-                    fog += _MainTex.Sample(sampler_LinearClamp, float3(uv, s)).rgb * per;
-                #endif
-                }
-
-                //return half4(sEnd, 1);
-                //return half4(d.rrr, 1);
-                return half4(fog, 1);
+                return _MainTex.SampleLevel(sampler_LinearClamp, float3(i.uv, sqrt(p)), 0);
             }
             ENDHLSL
         }

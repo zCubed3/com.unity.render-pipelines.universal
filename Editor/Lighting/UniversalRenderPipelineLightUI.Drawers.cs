@@ -271,6 +271,8 @@ namespace UnityEditor.Rendering.Universal
 #else
                     serializedLight.settings.DrawRange(false);
 #endif
+
+                    EditorGUILayout.PropertyField(serializedLight.specularRadius);
                 }
             }
         }

@@ -8,17 +8,30 @@ namespace UnityEngine.Rendering.Universal.Additions
         public class Settings
         {
             [Header("If you're looking for other settings, they're on the lights and cameras!")]
-            [Tooltip("If this is set, we use a different compute shader")]
-            public ComputeShader computeShader;
+            [Tooltip("If this is set, we use a different sampling shader")]
+            public ComputeShader samplerCS;
+
+            [Tooltip("If this is set, we use a different compositing shader")]
+            public ComputeShader compositorCS;
 
             [Tooltip("If this is set, we use a different blending shader")]
             public Shader blendShader;
+
+            [Tooltip("If this is set, we use a different noise pattern")]
+            public Texture2D noisePattern;
         }
 
         [Header("EXPERIMENTAL and WIP!")]
         public Settings settings;
 
         RealtimeVolumetricsPass fogPass;
+
+        public enum BufferQuality : int {
+            Low     = 32,
+            Medium  = 64,
+            High    = 96,
+            Ultra   = 128
+        }
 
         public override void Create()
         {
@@ -28,17 +41,32 @@ namespace UnityEngine.Rendering.Universal.Additions
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
-            if (fogPass.computeShader == null)
-                fogPass.computeShader = settings.computeShader == null ? Resources.Load<ComputeShader>("RealtimeVolumetricsCompute") : settings.computeShader;
+            if (fogPass.samplerCS == null)
+                fogPass.samplerCS = settings.samplerCS == null ? Resources.Load<ComputeShader>("VolumetricSampler") : settings.samplerCS;
 
-            if (fogPass.computeShader == null)
+            if (fogPass.samplerCS == null)
                 Debug.LogError("Please assign a compute shader to the Volumetric Pass!");
 
-            if (!fogPass.blendMaterial)
-                fogPass.blendMaterial = new Material(settings.blendShader == null ? Shader.Find("PrismaRP/Volumetrics/FogCompositor") : settings.blendShader);
 
-            if (fogPass.blendMaterial == null)
+            if (fogPass.compositorCS == null)
+                fogPass.compositorCS = settings.compositorCS == null ? Resources.Load<ComputeShader>("VolumetricCompositor") : settings.compositorCS;
+
+            if (fogPass.compositorCS == null)
+                Debug.LogError("Please assign a compute shader to the Volumetric Pass!");
+
+
+            if (!fogPass.blendPS)
+                fogPass.blendPS = new Material(settings.blendShader == null ? Shader.Find("Hidden/Volumetrics/FogBlend") : settings.blendShader);
+
+            if (fogPass.blendPS == null)
                 Debug.LogError("Please assign a blending shader to the Volumetric Pass!");
+
+
+            if (!fogPass.noisePattern)
+                fogPass.noisePattern = settings.noisePattern == null ? Resources.Load<Texture2D>("VolumeNoisePattern") : settings.noisePattern;
+
+            if (fogPass.noisePattern == null)
+                Debug.LogError("Please assign a noise pattern to the Volumetric Pass!");
 
             fogPass.settings = settings;
             renderer.EnqueuePass(fogPass);
