@@ -24,5 +24,8 @@
       "description": "Collection of scenes showcasing different features of the Universal Render Pipeline.",
       "path": "Samples~/URPPackageSamples"
     }
-  ]
+  ],
+  "author": {
+    "name": "zCubed"
+  }
 }
