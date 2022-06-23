@@ -5,9 +5,9 @@ using Unity.Mathematics;
 
 namespace UnityEngine.Rendering.Universal
 {
-    internal class LightCookieManager : IDisposable
+    public class LightCookieManager : IDisposable
     {
-        static class ShaderProperty
+        public static class ShaderProperty
         {
             public static readonly int mainLightTexture = Shader.PropertyToID("_MainLightCookieTexture");
             public static readonly int mainLightWorldToLight = Shader.PropertyToID("_MainLightWorldToLight");
@@ -443,6 +443,10 @@ namespace UnityEngine.Rendering.Universal
 
         Texture2DAtlas m_AdditionalLightsCookieAtlas;
         LightCookieShaderData m_AdditionalLightsCookieShaderData;
+
+        // zCubed Additions
+        public Texture2DAtlas additionalLightCookieAtlas { get => m_AdditionalLightsCookieAtlas; }
+        // ===============
 
         readonly Settings m_Settings;
         WorkMemory m_WorkMem;

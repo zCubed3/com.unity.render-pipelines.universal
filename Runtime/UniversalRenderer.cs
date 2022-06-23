@@ -109,6 +109,10 @@ namespace UnityEngine.Rendering.Universal
         LightCookieManager m_LightCookieManager;
         IntermediateTextureMode m_IntermediateTextureMode;
 
+        // zCubed Additions
+        public LightCookieManager lightCookieManager { get => m_LightCookieManager; }
+        // ================
+
         // Materials used in URP Scriptable Render Passes
         Material m_BlitMaterial = null;
         Material m_CopyDepthMaterial = null;

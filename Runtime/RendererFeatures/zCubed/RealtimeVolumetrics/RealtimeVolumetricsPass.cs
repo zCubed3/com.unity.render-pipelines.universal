@@ -127,6 +127,7 @@ namespace UnityEngine.Rendering.Universal.Additions
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
             var additionalCameraData = renderingData.cameraData.camera.GetUniversalAdditionalCameraData();
+            var renderer = renderingData.cameraData.renderer as UniversalRenderer;
 
             if (!additionalCameraData.renderVolumetrics)
                 return;
@@ -257,7 +258,6 @@ namespace UnityEngine.Rendering.Universal.Additions
                     }
                 }
             }
-
 
             if (actual > 0)
             {

@@ -160,7 +160,7 @@ void CSMain(uint3 id : SV_DispatchThreadID)
         sampled += _MainLightColor.xyz * _FogParams.z * fac;
     }
     
-        [loop]
+    [loop]
     for (int l = 0; l < _AdditionalLightsCount.x; l++)
     {
         float4 lAtten = _AdditionalLightsAttenuation[l];
