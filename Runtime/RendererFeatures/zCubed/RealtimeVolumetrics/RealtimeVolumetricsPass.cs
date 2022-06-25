@@ -19,6 +19,11 @@ namespace UnityEngine.Rendering.Universal.Additions
             public static readonly int _MainLightFogParams = Shader.PropertyToID("_MainLightFogParams");
             public static readonly int _MainLightPosition = Shader.PropertyToID("_MainLightPosition");
             public static readonly int _MainLightColor = Shader.PropertyToID("_MainLightColor");
+            public static readonly int _CascadeShadowSplitSpheres0 = Shader.PropertyToID("_CascadeShadowSplitSpheres0");
+            public static readonly int _CascadeShadowSplitSpheres1 = Shader.PropertyToID("_CascadeShadowSplitSpheres1");
+            public static readonly int _CascadeShadowSplitSpheres2 = Shader.PropertyToID("_CascadeShadowSplitSpheres2");
+            public static readonly int _CascadeShadowSplitSpheres3 = Shader.PropertyToID("_CascadeShadowSplitSpheres3");
+            public static readonly int _CascadeShadowSplitSphereRadii = Shader.PropertyToID("_CascadeShadowSplitSphereRadii");
 
             public static readonly int _AdditionalShadowmap = Shader.PropertyToID("_AdditionalShadowmap");
             public static readonly int _AdditionalLightsCount = Shader.PropertyToID("_AdditionalLightsCount");
@@ -182,6 +187,20 @@ namespace UnityEngine.Rendering.Universal.Additions
             {
                 cmd.SetComputeTextureParam(samplerCS, kernel, Properties._MainShadowmap, new RenderTargetIdentifier(mainLightPass.mainLightShadowmapTexture));
                 cmd.SetComputeMatrixArrayParam(samplerCS, Properties._MainLightWorldToShadow, mainLightPass.mainLightShadowMatrices);
+
+                cmd.SetComputeVectorParam(samplerCS, Properties._CascadeShadowSplitSpheres0,
+                    mainLightPass.cascadeSplitDistances[0]);
+                cmd.SetComputeVectorParam(samplerCS, Properties._CascadeShadowSplitSpheres1,
+                    mainLightPass.cascadeSplitDistances[1]);
+                cmd.SetComputeVectorParam(samplerCS, Properties._CascadeShadowSplitSpheres2,
+                    mainLightPass.cascadeSplitDistances[2]);
+                cmd.SetComputeVectorParam(samplerCS, Properties._CascadeShadowSplitSpheres3,
+                    mainLightPass.cascadeSplitDistances[3]);
+                cmd.SetComputeVectorParam(samplerCS, Properties._CascadeShadowSplitSphereRadii, new Vector4(
+                    mainLightPass.cascadeSplitDistances[0].w * mainLightPass.cascadeSplitDistances[0].w,
+                    mainLightPass.cascadeSplitDistances[1].w * mainLightPass.cascadeSplitDistances[1].w,
+                    mainLightPass.cascadeSplitDistances[2].w * mainLightPass.cascadeSplitDistances[2].w,
+                    mainLightPass.cascadeSplitDistances[3].w * mainLightPass.cascadeSplitDistances[3].w));
             }
 
             if (additionalLightPass != null)
@@ -273,6 +292,23 @@ namespace UnityEngine.Rendering.Universal.Additions
             else
                 cmd.SetComputeVectorParam(samplerCS, Properties._AdditionalLightsCount, Vector4.zero);
 
+            //
+            // Light cookies
+            //
+            if (renderingData.cameraData.renderer is UniversalRenderer urp)
+            {
+                if (urp.lightCookieManager != null)
+                {
+                    if (urp.lightCookieManager.additionalLightCookieAtlas != null)
+                    {
+                        cmd.SetComputeTextureParam(samplerCS, kernel, "_A", urp.lightCookieManager.additionalLightCookieAtlas.AtlasTexture);
+                    }
+                }
+            }
+
+            //
+            // Projection
+            //
             Matrix4x4[] cameraToWorld = new Matrix4x4[2];
             Matrix4x4[] worldToCamera = new Matrix4x4[2];
             Matrix4x4[] projection = new Matrix4x4[2];

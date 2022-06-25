@@ -20,6 +20,10 @@ namespace UnityEngine.Rendering.Universal.Internal
             public static int _AdditionalShadowOffset3;
             public static int _AdditionalShadowFadeParams;
             public static int _AdditionalShadowmapSize;
+
+            // zCubed Additions
+            public static int _AdditionalPCSSParams;
+            // ================
         }
 
         internal struct ShadowResolutionRequest
@@ -86,6 +90,8 @@ namespace UnityEngine.Rendering.Universal.Internal
         public Vector4[] additionalLightIndexToShadowParams { get => m_AdditionalLightIndexToShadowParams; }
         public Matrix4x4[] additionalLightShadowSliceIndexTo_WorldShadowMatrix { get => m_AdditionalLightShadowSliceIndexTo_WorldShadowMatrix; }
 
+        Vector4[] m_AdditionalLightPCSSParams; 
+        // ================
 
         bool m_CreateEmptyShadowmap;
 
@@ -116,6 +122,10 @@ namespace UnityEngine.Rendering.Universal.Internal
             AdditionalShadowsConstantBuffer._AdditionalShadowOffset3 = Shader.PropertyToID("_AdditionalShadowOffset3");
             AdditionalShadowsConstantBuffer._AdditionalShadowFadeParams = Shader.PropertyToID("_AdditionalShadowFadeParams");
             AdditionalShadowsConstantBuffer._AdditionalShadowmapSize = Shader.PropertyToID("_AdditionalShadowmapSize");
+
+            // zCubed Additions
+            AdditionalShadowsConstantBuffer._AdditionalPCSSParams = Shader.PropertyToID("_AdditionalPCSSParams");
+
             m_AdditionalLightsShadowmap.Init("_AdditionalLightsShadowmapTexture");
 
             m_AdditionalLightsWorldToShadow_SSBO = Shader.PropertyToID("_AdditionalLightsWorldToShadow_SSBO");
@@ -137,6 +147,10 @@ namespace UnityEngine.Rendering.Universal.Internal
             m_VisibleLightIndexToSortedShadowResolutionRequestsFirstSliceIndex = new int[maxVisibleLights];
             m_AdditionalLightIndexToShadowParams = new Vector4[maxAdditionalLightShadowParams];
             m_VisibleLightIndexToCameraSquareDistance = new float[maxVisibleLights];
+
+            // zCubed Additions
+            m_AdditionalLightPCSSParams = new Vector4[maxAdditionalLightShadowParams];
+            // ================
 
             if (!m_UseStructuredBuffer)
             {
@@ -697,6 +711,13 @@ namespace UnityEngine.Rendering.Universal.Internal
                                     Vector4 shadowParams = new Vector4(shadowStrength, softShadows, LightTypeIdentifierInShadowParams_Spot, perLightFirstShadowSliceIndex);
                                     m_AdditionalLightShadowSliceIndexTo_WorldShadowMatrix[globalShadowSliceIndex] = shadowTransform;
                                     m_AdditionalLightIndexToShadowParams[additionalLightIndex] = shadowParams;
+
+                                    // zCubed Additions
+                                    var additional = light.GetUniversalAdditionalLightData();
+                                    Vector4 pcssParams = new Vector4(0, additional.PCFRadius, 0, 0);
+                                    m_AdditionalLightPCSSParams[additionalLightIndex] = pcssParams;
+                                    // ================
+
                                     isValidShadowCastingLight = true;
                                 }
                             }
@@ -727,6 +748,12 @@ namespace UnityEngine.Rendering.Universal.Internal
                                     m_AdditionalLightShadowSliceIndexTo_WorldShadowMatrix[globalShadowSliceIndex] = shadowTransform;
                                     m_AdditionalLightIndexToShadowParams[additionalLightIndex] = shadowParams;
                                     isValidShadowCastingLight = true;
+
+                                    // zCubed Additions
+                                    var additional = light.GetUniversalAdditionalLightData();
+                                    Vector4 pcssParams = new Vector4(0, additional.PCFRadius, 0, 0);
+                                    m_AdditionalLightPCSSParams[additionalLightIndex] = pcssParams;
+                                    // ================
                                 }
                             }
                         }
@@ -974,6 +1001,8 @@ namespace UnityEngine.Rendering.Universal.Internal
             {
                 cmd.SetGlobalVectorArray(AdditionalShadowsConstantBuffer._AdditionalShadowParams, m_AdditionalLightIndexToShadowParams);                         // per-light data
                 cmd.SetGlobalMatrixArray(AdditionalShadowsConstantBuffer._AdditionalLightsWorldToShadow, m_AdditionalLightShadowSliceIndexTo_WorldShadowMatrix); // per-shadow-slice data
+                cmd.SetGlobalVectorArray(AdditionalShadowsConstantBuffer._AdditionalPCSSParams, m_AdditionalLightPCSSParams); // per-light PCSS settings
+                // ================
             }
 
             ShadowUtils.GetScaleAndBiasForLinearDistanceFade(m_MaxShadowDistanceSq, m_CascadeBorder, out float shadowFadeScale, out float shadowFadeBias);

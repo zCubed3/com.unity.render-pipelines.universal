@@ -22,6 +22,10 @@ namespace UnityEngine.Rendering.Universal.Internal
             public static int _ShadowOffset2;
             public static int _ShadowOffset3;
             public static int _ShadowmapSize;
+
+            // zCubed Additions
+            public static int _PCSSParams;
+            // ================
         }
 
         const int k_MaxCascades = 4;
@@ -42,6 +46,7 @@ namespace UnityEngine.Rendering.Universal.Internal
         public RenderTexture mainLightShadowmapTexture { get => m_MainLightShadowmapTexture; }
 
         public Matrix4x4[] mainLightShadowMatrices { get => m_MainLightShadowMatrices; }
+        public Vector4[] cascadeSplitDistances { get => m_CascadeSplitDistances; }
         // ================
 
         bool m_CreateEmptyShadowmap;
@@ -69,6 +74,10 @@ namespace UnityEngine.Rendering.Universal.Internal
             MainLightShadowConstantBuffer._ShadowOffset2 = Shader.PropertyToID("_MainLightShadowOffset2");
             MainLightShadowConstantBuffer._ShadowOffset3 = Shader.PropertyToID("_MainLightShadowOffset3");
             MainLightShadowConstantBuffer._ShadowmapSize = Shader.PropertyToID("_MainLightShadowmapSize");
+
+            // zCubed Additions
+            MainLightShadowConstantBuffer._PCSSParams = Shader.PropertyToID("_MainLightPCSSParams");
+            // ================
 
             m_MainLightShadowmap.Init("_MainLightShadowmapTexture");
         }
@@ -303,6 +312,14 @@ namespace UnityEngine.Rendering.Universal.Internal
                 cmd.SetGlobalVector(MainLightShadowConstantBuffer._ShadowmapSize, new Vector4(invShadowAtlasWidth,
                     invShadowAtlasHeight,
                     renderTargetWidth, renderTargetHeight));
+
+                // zCubed Additions
+                var additionalData = light.GetUniversalAdditionalLightData();
+                cmd.SetGlobalVector(MainLightShadowConstantBuffer._PCSSParams, new Vector4(
+                    0,
+                    additionalData.PCFRadius
+                ));
+                // ================
             }
         }
     };

@@ -165,11 +165,19 @@ namespace UnityEngine.Rendering.Universal
         }
 
         [Tooltip("How large the 'orb' of the light is.")]
-        [SerializeField][Min(0F)] float m_SpecularRadius = 0.0f;
+        [SerializeField] [Min(0F)] float m_SpecularRadius = 0.0f;
         public float specularRadius
         {
             get => m_SpecularRadius;
             set => m_SpecularRadius = value;
+        }
+
+        [Tooltip("How much we scatter the samples of shadows from this light.")]
+        [SerializeField] [Min(0F)] float m_PCFRadius = 2.0f;
+        public float PCFRadius
+        {
+            get => m_PCFRadius;
+            set => m_PCFRadius = value;
         }
         // ================
     }

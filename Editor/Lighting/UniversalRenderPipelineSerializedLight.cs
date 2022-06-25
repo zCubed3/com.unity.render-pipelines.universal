@@ -35,6 +35,7 @@ namespace UnityEditor.Rendering.Universal
         public SerializedProperty volumetricsPower { get; }
 
         public SerializedProperty specularRadius { get; }
+        public SerializedProperty pcfRadius { get; }
         // ================
 
 
@@ -85,6 +86,8 @@ namespace UnityEditor.Rendering.Universal
             volumetricsPower = serializedAdditionalDataObject.FindProperty("m_VolumetricsPower");
 
             specularRadius = serializedAdditionalDataObject.FindProperty("m_SpecularRadius");
+
+            pcfRadius = serializedAdditionalDataObject.FindProperty("m_PCFRadius");
 
             settings.ApplyModifiedProperties();
         }

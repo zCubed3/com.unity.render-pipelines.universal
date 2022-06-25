@@ -266,7 +266,12 @@ namespace UnityEngine.Rendering.Universal
                 && (SystemInfo.graphicsDeviceType != GraphicsDeviceType.OpenGLES2)) ?
                 ShadowSamplingMode.CompareDepths : ShadowSamplingMode.None;
             var shadowTexture = RenderTexture.GetTemporary(rtd);
+
+            // zCubed Additions
+            // zCubed: Force point sampling always for PCSS
+            //shadowTexture.filterMode = FilterMode.Point;
             shadowTexture.filterMode = m_ForceShadowPointSampling ? FilterMode.Point : FilterMode.Bilinear;
+            
             shadowTexture.wrapMode = TextureWrapMode.Clamp;
             return shadowTexture;
         }

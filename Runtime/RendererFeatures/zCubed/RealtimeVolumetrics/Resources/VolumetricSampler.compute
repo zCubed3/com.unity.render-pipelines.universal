@@ -52,6 +52,11 @@ SamplerComparisonState sampler_AdditionalShadowmap;
 float4x4 _MainLightWorldToShadow[MAX_SHADOW_CASCADES + 1];
 float4 _MainLightFogParams;
 float4 _MainLightShadowParams;
+float4 _CascadeShadowSplitSpheres0;
+float4 _CascadeShadowSplitSpheres1;
+float4 _CascadeShadowSplitSpheres2;
+float4 _CascadeShadowSplitSpheres3;
+float4 _CascadeShadowSplitSphereRadii;
 
 half4 _AdditionalShadowParams[MAX_VISIBLE_LIGHTS];
 float4x4 _AdditionalLightsWorldToShadow[MAX_VISIBLE_LIGHTS];
@@ -78,6 +83,20 @@ float MieScattering(float lightDotView, float gScattering)
 //
 // URP borrowed functions
 //
+half ComputeCascadeIndex(float3 positionWS)
+{
+    float3 fromCenter0 = positionWS - _CascadeShadowSplitSpheres0.xyz;
+    float3 fromCenter1 = positionWS - _CascadeShadowSplitSpheres1.xyz;
+    float3 fromCenter2 = positionWS - _CascadeShadowSplitSpheres2.xyz;
+    float3 fromCenter3 = positionWS - _CascadeShadowSplitSpheres3.xyz;
+    float4 distances2 = float4(dot(fromCenter0, fromCenter0), dot(fromCenter1, fromCenter1), dot(fromCenter2, fromCenter2), dot(fromCenter3, fromCenter3));
+
+    half4 weights = half4(distances2 < _CascadeShadowSplitSphereRadii);
+    weights.yzw = saturate(weights.yzw - weights.xyz);
+
+    return half(4.0) - dot(weights, half4(4, 3, 2, 1));
+}
+
 float DistanceAttenuation(float distanceSqr, half2 distanceAttenuation)
 {
     // We use a shared distance attenuation for additional directional and puctual lights
@@ -143,7 +162,8 @@ void CSMain(uint3 id : SV_DispatchThreadID)
         
     if (length(_MainLightColor) > 0.0)
     {
-        float3 shadowPoint = mul(_MainLightWorldToShadow[0], float4(sPoint, 1)).xyz;
+        float cascadeIndex = ComputeCascadeIndex(sPoint);
+        float3 shadowPoint = mul(_MainLightWorldToShadow[cascadeIndex], float4(sPoint, 1)).xyz;
 
         float shadow = 1;
         

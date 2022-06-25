@@ -28,7 +28,9 @@ namespace UnityEngine.Rendering.Universal
         _4096 = 4096,
 
         // zCubed Additions
-        _8192 = 8192,
+        // DISABLED FOR NOW!
+        // Was producing inaccurate results
+        //_8192 = 8192,
         // ----------------
     }
 

@@ -247,7 +247,7 @@ namespace UnityEngine.Rendering.Universal
             }
         }
 
-        private struct ShaderBitArray
+        public struct ShaderBitArray
         {
             const int k_BitsPerElement = 32;
             const int k_ElementShift = 5;
@@ -340,7 +340,7 @@ namespace UnityEngine.Rendering.Universal
         }
 
         /// Must match light data layout.
-        private class LightCookieShaderData : IDisposable
+        public class LightCookieShaderData : IDisposable
         {
             int m_Size = 0;
             bool m_UseStructuredBuffer;
@@ -446,6 +446,7 @@ namespace UnityEngine.Rendering.Universal
 
         // zCubed Additions
         public Texture2DAtlas additionalLightCookieAtlas { get => m_AdditionalLightsCookieAtlas; }
+        public LightCookieShaderData additionalLightsCookieShaderData { get => m_AdditionalLightsCookieShaderData; }
         // ===============
 
         readonly Settings m_Settings;

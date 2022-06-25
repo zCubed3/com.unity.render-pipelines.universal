@@ -73,6 +73,10 @@ half4       _MainLightShadowOffset2;
 half4       _MainLightShadowOffset3;
 half4       _MainLightShadowParams;   // (x: shadowStrength, y: 1.0 if soft shadows, 0.0 otherwise, z: main light fade scale, w: main light fade bias)
 float4      _MainLightShadowmapSize;  // (xy: 1/width and 1/height, zw: width and height)
+
+// zCubed Additions
+half4 _MainLightPCSSParams;
+// ================
 #ifndef SHADER_API_GLES3
 CBUFFER_END
 #endif
@@ -110,6 +114,10 @@ CBUFFER_START(AdditionalLightShadows)
 
 half4       _AdditionalShadowParams[MAX_VISIBLE_LIGHTS];                              // Per-light data
 float4x4    _AdditionalLightsWorldToShadow[MAX_PUNCTUAL_LIGHT_SHADOW_SLICES_IN_UBO];  // Per-shadow-slice-data
+
+// zCubed Additions
+half4       _AdditionalPCSSParams[MAX_VISIBLE_LIGHTS];    
+// ================
 
 half4       _AdditionalShadowOffset0;
 half4       _AdditionalShadowOffset1;
@@ -178,7 +186,6 @@ half4 GetMainLightShadowParams()
     return _MainLightShadowParams;
 }
 
-
 // ShadowParams
 // x: ShadowStrength
 // y: 1.0 if shadow is soft, 0.0 otherwise
@@ -192,6 +199,24 @@ half4 GetAdditionalLightShadowParams(int lightIndex)
     return _AdditionalShadowParams[lightIndex];
 #endif
 }
+
+// zCubed Additions
+half4 GetMainLightPCSSParams() 
+{
+    return _MainLightPCSSParams;
+}
+
+half4 GetAdditionalLightPCSSParams(int lightIndex) 
+{
+#if USE_STRUCTURED_BUFFER_FOR_LIGHT_DATA
+    // TODO
+    //return _AdditionalPCSSParams_SSBO[lightIndex];
+    return 0;
+#else
+    return _AdditionalPCSSParams[lightIndex];
+#endif
+}
+// ================
 
 half SampleScreenSpaceShadowmap(float4 shadowCoord)
 {
@@ -209,6 +234,140 @@ half SampleScreenSpaceShadowmap(float4 shadowCoord)
     return attenuation;
 }
 
+// zCubed Additions
+// zCubed: Replacing the weird 9 tap attenuation with custom PCF
+
+// PCSS may be fixed and implemented based on
+// https://developer.download.nvidia.com/whitepapers/2008/PCSS_Integration.pdf
+#define BLOCKER_SAMPLES 16
+#define PCF_SAMPLES 16
+
+//SAMPLER(sampler_PointClampShadow);
+
+float2 GetPCSSPoisson(int i) 
+{
+    const float2 PCSS_POISSON_DISKS[16] = {
+        float2( -0.94201624, -0.39906216 ),
+        float2( 0.94558609, -0.76890725 ),
+        float2( -0.094184101, -0.92938870 ),
+        float2( 0.34495938, 0.29387760 ),
+        float2( -0.91588581, 0.45771432 ),
+        float2( -0.81544232, -0.87912464 ),
+        float2( -0.38277543, 0.27676845 ),
+        float2( 0.97484398, 0.75648379 ),
+        float2( 0.44323325, -0.97511554 ),
+        float2( 0.53742981, -0.47373420 ),
+        float2( -0.26496911, -0.41893023 ),
+        float2( 0.79197514, 0.19090188 ),
+        float2( -0.24188840, 0.99706507 ),
+        float2( -0.81409955, 0.91437590 ),
+        float2( 0.19984126, 0.78641367 ),
+        float2( 0.14383161, -0.14100790 )
+    };
+
+    return PCSS_POISSON_DISKS[i];
+}
+
+// PCSSParams
+// x: Near
+// y: Radius
+
+/*
+float EstimatePenumbra(float zReciever, float zBlocker) 
+{
+    return (zReciever - zBlocker) / zBlocker;
+}
+
+void FindBlocker(out float avgBlockerDepth, out float numBlockers, float2 uv, float zReciever, half4 pcssParams, TEXTURE2D_SHADOW_PARAM(ShadowMap, sampler_ShadowMap), ShadowSamplingData samplingData) 
+{
+    float searchWidth = pcssParams.y * (zReciever - pcssParams.x) / zReciever;
+
+    float blockerSum = 0;
+    numBlockers = 0;
+
+    for (int i = 0; i < BLOCKER_SAMPLES; ++i) {
+        float depth = ShadowMap.SampleLevel(sampler_PointClampShadow, uv + GetPCSSPoisson(i) * searchWidth * samplingData.shadowmapSize.xy, 0);
+
+        if (depth < zReciever) {
+            blockerSum += depth;
+            numBlockers += 1;
+        }
+    }
+
+    avgBlockerDepth = blockerSum / numBlockers;
+}
+*/
+
+float PCF_Filter(float2 uv, float zReciever, float filterRadiusUV, TEXTURE2D_SHADOW_PARAM(ShadowMap, sampler_ShadowMap), ShadowSamplingData samplingData) 
+{
+    float sum = 0;
+
+    for (int i = 0; i < PCF_SAMPLES; ++i) {
+        float2 offset = GetPCSSPoisson(i) * filterRadiusUV;
+        sum += ShadowMap.SampleCmpLevelZero(sampler_ShadowMap, uv + offset * samplingData.shadowmapSize.xy, zReciever);
+    }
+
+    return sum / float(PCF_SAMPLES);
+}
+
+/*
+float PCSS(TEXTURE2D_SHADOW_PARAM(ShadowMap, sampler_ShadowMap), float4 shadowCoord, half4 pcssParams, ShadowSamplingData samplingData) {
+    float2 uv = shadowCoord.xy;
+    float zReciever = shadowCoord.z;
+
+    float avgDepth = 0;
+    float numBlockers = 0;
+    FindBlocker(avgDepth, numBlockers, uv, zReciever, pcssParams, TEXTURE2D_SHADOW_ARGS(ShadowMap, sampler_ShadowMap), samplingData);
+
+    if (numBlockers < 1)
+        return 1;
+
+    float penumbraSize = EstimatePenumbra(zReciever, avgDepth);
+    float filterRadiusUV = penumbraSize * pcssParams.y * pcssParams.x / shadowCoord.z;
+
+    return PCF_Filter(uv, zReciever, 2.0, TEXTURE2D_SHADOW_ARGS(ShadowMap, sampler_ShadowMap), samplingData);
+}
+*/
+
+real SampleShadowmapFiltered(TEXTURE2D_SHADOW_PARAM(ShadowMap, sampler_ShadowMap), float4 shadowCoord, half4 pcssParams, ShadowSamplingData samplingData)
+{
+    real attenuation;
+
+#define REPLACEMENT_PCF_SHADOWS
+#ifdef REPLACEMENT_PCF_SHADOWS
+    //attenuation = PCSS(TEXTURE2D_SHADOW_ARGS(ShadowMap, sampler_ShadowMap), shadowCoord, pcssParams, samplingData);
+    attenuation = PCF_Filter(shadowCoord.xy, shadowCoord.z, pcssParams.y, TEXTURE2D_SHADOW_ARGS(ShadowMap, sampler_ShadowMap), samplingData);
+#else
+    #if defined(SHADER_API_MOBILE) || defined(SHADER_API_SWITCH)
+        // 4-tap hardware comparison
+        real4 attenuation4;
+        attenuation4.x = real(SAMPLE_TEXTURE2D_SHADOW(ShadowMap, sampler_ShadowMap, shadowCoord.xyz + samplingData.shadowOffset0.xyz));
+        attenuation4.y = real(SAMPLE_TEXTURE2D_SHADOW(ShadowMap, sampler_ShadowMap, shadowCoord.xyz + samplingData.shadowOffset1.xyz));
+        attenuation4.z = real(SAMPLE_TEXTURE2D_SHADOW(ShadowMap, sampler_ShadowMap, shadowCoord.xyz + samplingData.shadowOffset2.xyz));
+        attenuation4.w = real(SAMPLE_TEXTURE2D_SHADOW(ShadowMap, sampler_ShadowMap, shadowCoord.xyz + samplingData.shadowOffset3.xyz));
+        attenuation = dot(attenuation4, real(0.25));
+    #else
+        float fetchesWeights[9];
+        float2 fetchesUV[9];
+        SampleShadow_ComputeSamples_Tent_5x5(samplingData.shadowmapSize, shadowCoord.xy, fetchesWeights, fetchesUV);
+
+        attenuation = fetchesWeights[0] * SAMPLE_TEXTURE2D_SHADOW(ShadowMap, sampler_ShadowMap, float3(fetchesUV[0].xy, shadowCoord.z));
+        attenuation += fetchesWeights[1] * SAMPLE_TEXTURE2D_SHADOW(ShadowMap, sampler_ShadowMap, float3(fetchesUV[1].xy, shadowCoord.z));
+        attenuation += fetchesWeights[2] * SAMPLE_TEXTURE2D_SHADOW(ShadowMap, sampler_ShadowMap, float3(fetchesUV[2].xy, shadowCoord.z));
+        attenuation += fetchesWeights[3] * SAMPLE_TEXTURE2D_SHADOW(ShadowMap, sampler_ShadowMap, float3(fetchesUV[3].xy, shadowCoord.z));
+        attenuation += fetchesWeights[4] * SAMPLE_TEXTURE2D_SHADOW(ShadowMap, sampler_ShadowMap, float3(fetchesUV[4].xy, shadowCoord.z));
+        attenuation += fetchesWeights[5] * SAMPLE_TEXTURE2D_SHADOW(ShadowMap, sampler_ShadowMap, float3(fetchesUV[5].xy, shadowCoord.z));
+        attenuation += fetchesWeights[6] * SAMPLE_TEXTURE2D_SHADOW(ShadowMap, sampler_ShadowMap, float3(fetchesUV[6].xy, shadowCoord.z));
+        attenuation += fetchesWeights[7] * SAMPLE_TEXTURE2D_SHADOW(ShadowMap, sampler_ShadowMap, float3(fetchesUV[7].xy, shadowCoord.z));
+        attenuation += fetchesWeights[8] * SAMPLE_TEXTURE2D_SHADOW(ShadowMap, sampler_ShadowMap, float3(fetchesUV[8].xy, shadowCoord.z));
+    #endif
+#endif
+
+    return attenuation;
+}
+// ================
+
+/*
 real SampleShadowmapFiltered(TEXTURE2D_SHADOW_PARAM(ShadowMap, sampler_ShadowMap), float4 shadowCoord, ShadowSamplingData samplingData)
 {
     real attenuation;
@@ -239,8 +398,9 @@ real SampleShadowmapFiltered(TEXTURE2D_SHADOW_PARAM(ShadowMap, sampler_ShadowMap
 
     return attenuation;
 }
+*/
 
-real SampleShadowmap(TEXTURE2D_SHADOW_PARAM(ShadowMap, sampler_ShadowMap), float4 shadowCoord, ShadowSamplingData samplingData, half4 shadowParams, bool isPerspectiveProjection = true)
+real SampleShadowmap(TEXTURE2D_SHADOW_PARAM(ShadowMap, sampler_ShadowMap), float4 shadowCoord, ShadowSamplingData samplingData, half4 shadowParams, half4 pcssParams, bool isPerspectiveProjection = true)
 {
     // Compiler will optimize this branch away as long as isPerspectiveProjection is known at compile time
     if (isPerspectiveProjection)
@@ -252,7 +412,7 @@ real SampleShadowmap(TEXTURE2D_SHADOW_PARAM(ShadowMap, sampler_ShadowMap), float
 #ifdef _SHADOWS_SOFT
     if(shadowParams.y != 0)
     {
-        attenuation = SampleShadowmapFiltered(TEXTURE2D_SHADOW_ARGS(ShadowMap, sampler_ShadowMap), shadowCoord, samplingData);
+        attenuation = SampleShadowmapFiltered(TEXTURE2D_SHADOW_ARGS(ShadowMap, sampler_ShadowMap), shadowCoord, pcssParams, samplingData);
     }
     else
 #endif
@@ -304,7 +464,12 @@ half MainLightRealtimeShadow(float4 shadowCoord)
 #else
     ShadowSamplingData shadowSamplingData = GetMainLightShadowSamplingData();
     half4 shadowParams = GetMainLightShadowParams();
-    return SampleShadowmap(TEXTURE2D_ARGS(_MainLightShadowmapTexture, sampler_MainLightShadowmapTexture), shadowCoord, shadowSamplingData, shadowParams, false);
+
+    // zCubed Additions
+    half4 pcssParams = GetMainLightPCSSParams();
+    // ================
+
+    return SampleShadowmap(TEXTURE2D_ARGS(_MainLightShadowmapTexture, sampler_MainLightShadowmapTexture), shadowCoord, shadowSamplingData, shadowParams, pcssParams, false);
 #endif
 }
 
@@ -319,6 +484,10 @@ half AdditionalLightRealtimeShadow(int lightIndex, float3 positionWS, half3 ligh
     ShadowSamplingData shadowSamplingData = GetAdditionalLightShadowSamplingData();
 
     half4 shadowParams = GetAdditionalLightShadowParams(lightIndex);
+
+    // zCubed Additions
+    half4 pcssParams = GetAdditionalLightPCSSParams(lightIndex);
+    // ================
 
     int shadowSliceIndex = shadowParams.w;
 
@@ -342,7 +511,7 @@ half AdditionalLightRealtimeShadow(int lightIndex, float3 positionWS, half3 ligh
     float4 shadowCoord = mul(_AdditionalLightsWorldToShadow[shadowSliceIndex], float4(positionWS, 1.0));
 #endif
 
-    return SampleShadowmap(TEXTURE2D_ARGS(_AdditionalLightsShadowmapTexture, sampler_AdditionalLightsShadowmapTexture), shadowCoord, shadowSamplingData, shadowParams, true);
+    return SampleShadowmap(TEXTURE2D_ARGS(_AdditionalLightsShadowmapTexture, sampler_AdditionalLightsShadowmapTexture), shadowCoord, shadowSamplingData, shadowParams, pcssParams, true);
 }
 
 half GetMainLightShadowFade(float3 positionWS)
