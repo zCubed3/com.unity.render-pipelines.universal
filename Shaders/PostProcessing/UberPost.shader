@@ -167,10 +167,15 @@ Shader "Hidden/Universal Render Pipeline/UberPost"
                     bloom.xyz = DecodeRGBM(bloom);
                 }
 
-                bloom.xyz *= BloomIntensity;
-                //color = lerp(color, bloom.xyz, 0.4);
+                //bloom.xyz *= BloomIntensity;
+                
+                //#define USE_OLD_URP
+                #ifdef USE_OLD_URP
+                color += bloom.xyz * BloomIntensity * BloomTint;
+                #else
+                color = lerp(color, bloom.rgb * BloomTint, saturate(BloomIntensity));
+                #endif
 
-                color += bloom.xyz * BloomTint;
                 //color = bloom.xyz * BloomTint;
 
                 #if defined(BLOOM_DIRT)

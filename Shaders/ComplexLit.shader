@@ -65,6 +65,18 @@ Shader "Universal Render Pipeline/Complex Lit"
         [HideInInspector][NoScaleOffset]unity_Lightmaps("unity_Lightmaps", 2DArray) = "" {}
         [HideInInspector][NoScaleOffset]unity_LightmapsInd("unity_LightmapsInd", 2DArray) = "" {}
         [HideInInspector][NoScaleOffset]unity_ShadowMasks("unity_ShadowMasks", 2DArray) = "" {}
+
+        // zCubed Additions
+        _BRDFMap ("BRDF Map", 2D) = "white" {}
+        
+        [HideInInspector] _PackingMode("Packing Mode", float) = 0.0
+		
+        _BumpToOcclusion("Normal To Occlusion", Range(0.0, 2.0)) = 1.0
+
+        _EmissionFalloff("Emission Falloff", Range(0, 10)) = 0.0
+        _EmissionMultiply("Emission Multiply", Float) = 0.0
+
+        _OcclusionContribution("AO Contribution", Vector) = (1.0, 1.0, 1.0, 1.0)
     }
 
     SubShader
@@ -138,6 +150,12 @@ Shader "Universal Render Pipeline/Complex Lit"
             #pragma multi_compile_instancing
             #pragma instancing_options renderinglayer
             #pragma multi_compile _ DOTS_INSTANCING_ON
+
+            //--------------------------------------
+            // zCubed Additions
+            #pragma shader_feature_local_fragment _BRDFMAP
+            #pragma shader_feature_local_fragment _ALBEDO_EMISSION_MULTIPLY
+            #pragma shader_feature_local_fragment _ALPHAGLASS_ON
 
             #pragma vertex LitPassVertex
             #pragma fragment LitPassFragment

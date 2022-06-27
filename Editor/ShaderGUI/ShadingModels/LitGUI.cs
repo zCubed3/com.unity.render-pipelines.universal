@@ -195,7 +195,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
 
                 // zCubed Additions
                 // zCubed: I know I shouldn't do this but I wanted efficiency
-                if (properties.occlusionMap.textureValue)
+                if (properties.occlusionMap.textureValue && properties.occlusionContributionProp != null)
                 {
                     EditorGUI.indentLevel += 2;
 

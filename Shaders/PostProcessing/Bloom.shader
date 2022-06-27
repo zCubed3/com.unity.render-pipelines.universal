@@ -50,16 +50,18 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
         #endif
         }
 
+        //#define USE_OLD_URP
+        #ifdef USE_OLD_URP
+        #define USE_THRESHOLDING
+        #define URP_OLD_UPSAMPLE
+        #endif
+
         half4 FragPrefilter(Varyings input) : SV_Target
         {
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
             float2 uv = UnityStereoTransformScreenSpaceTex(input.uv);
 
         #if _BLOOM_HQ
-
-            // zCubed Additions
-            #define URP_OLD_DOWNSAMPLE
-            #ifdef URP_OLD_DOWNSAMPLE
             float texelSize = _SourceTex_TexelSize.x;
             half4 A = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + texelSize * float2(-1.0, -1.0));
             half4 B = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv + texelSize * float2(0.0, -1.0));
@@ -83,61 +85,27 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
             o += (F + G + L + K) * div.y;
             o += (G + H + M + L) * div.y;
 
-            half3 color = o.xyz;
-
-            #else
-
-            //https://www.froyok.fr/blog/2021-12-ue4-custom-bloom/
-            const float2 COORDS[13] = {
-                float2( -1.0f,  1.0f ), float2(  1.0f,  1.0f ),
-                float2( -1.0f, -1.0f ), float2(  1.0f, -1.0f ),
-
-                float2(-2.0f, 2.0f), float2( 0.0f, 2.0f), float2( 2.0f, 2.0f),
-                float2(-2.0f, 0.0f), float2( 0.0f, 0.0f), float2( 2.0f, 0.0f),
-                float2(-2.0f,-2.0f), float2( 0.0f,-2.0f), float2( 2.0f,-2.0f)
-            };
-
-
-            const float WEIGHTS[13] = {
-                // 4 samples
-                // (1 / 4) * 0.5f = 0.125f
-                0.125f, 0.125f,
-                0.125f, 0.125f,
-
-                // 9 samples
-                // (1 / 9) * 0.5f
-                0.0555555f, 0.0555555f, 0.0555555f,
-                0.0555555f, 0.0555555f, 0.0555555f,
-                0.0555555f, 0.0555555f, 0.0555555f
-            };
-
-            float3 color = float3(0, 0, 0);
-
-            [unroll]
-            for( int i = 0; i < 13; i++ )
-            {
-                float2 currentUV = uv + COORDS[i] * _SourceTex_TexelSize.xy;
-                color += WEIGHTS[i] * SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, currentUV).rgb;
-            }
-
-            #endif
+            half4 color = o;
         #else
-            half3 color = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv).xyz;
+            half4 color = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv);
         #endif
 
             // User controlled clamp to limit crazy high broken spec
             color = min(ClampMax, color);
 
             // Thresholding
+            //#define USE_THRESHOLDING
+            #ifdef USE_THRESHOLDING
             half brightness = Max3(color.r, color.g, color.b);
             half softness = clamp(brightness - Threshold + ThresholdKnee, 0.0, 2.0 * ThresholdKnee);
             softness = (softness * softness) / (4.0 * ThresholdKnee + 1e-4);
             half multiplier = max(brightness - Threshold, softness) / max(brightness, 1e-4);
             color *= multiplier;
+            #endif
 
             // Clamp colors to positive once in prefilter. Encode can have a sqrt, and sqrt(-x) == NaN. Up/Downsample passes would then spread the NaN.
             color = max(color, 0);
-            return EncodeHDR(color);
+            return color;
         }
 
         half4 FragBlurH(Varyings input) : SV_Target
@@ -184,11 +152,52 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
             return color;
         }
 
+        // zCubed Additions
+        half4 FragBlurRadial(Varyings input) : SV_TARGET
+        {
+            float2 uv = input.uv;
+
+            //https://www.froyok.fr/blog/2021-12-ue4-custom-bloom/
+            const float2 COORDS[13] = {
+                float2( -1.0f,  1.0f ), float2(  1.0f,  1.0f ),
+                float2( -1.0f, -1.0f ), float2(  1.0f, -1.0f ),
+
+                float2(-2.0f, 2.0f), float2( 0.0f, 2.0f), float2( 2.0f, 2.0f),
+                float2(-2.0f, 0.0f), float2( 0.0f, 0.0f), float2( 2.0f, 0.0f),
+                float2(-2.0f,-2.0f), float2( 0.0f,-2.0f), float2( 2.0f,-2.0f)
+            };
+
+
+            const float WEIGHTS[13] = {
+                // 4 samples
+                // (1 / 4) * 0.5f = 0.125f
+                0.125f, 0.125f,
+                0.125f, 0.125f,
+
+                // 9 samples
+                // (1 / 9) * 0.5f
+                0.0555555f, 0.0555555f, 0.0555555f,
+                0.0555555f, 0.0555555f, 0.0555555f,
+                0.0555555f, 0.0555555f, 0.0555555f
+            };
+
+            half4 color = 0;
+
+            [unroll]
+            for( int i = 0; i < 13; i++ )
+            {
+                float2 currentUV = uv + COORDS[i] * _SourceTex_TexelSize.xy;
+                color += WEIGHTS[i] * SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, currentUV);
+            }
+
+            return color;
+        }
+        // ================
+
         half3 Upsample(float2 uv)
         {
             // zCubed Additions
-            // URP Old
-            #define URP_OLD_UPSAMPLE
+            //#define URP_OLD_UPSAMPLE
             #ifdef URP_OLD_UPSAMPLE
 
             half3 highMip = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv));
@@ -216,16 +225,18 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
                 0.0625f, 0.125f, 0.0625f
             };
 
-            float3 color = float3(0, 0, 0);
+            half4 color = 0;
 
             [unroll]
             for( int i = 0; i < 9; i++ )
             {
                 float2 currentUV = uv + COORDS[i] * _SourceTexLowMip_TexelSize.xy;
-                color += WEIGHTS[i] * DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTexLowMip, sampler_LinearClamp, currentUV));
+                color += WEIGHTS[i] * SAMPLE_TEXTURE2D_X(_SourceTexLowMip, sampler_LinearClamp, currentUV);
             }
 
-            return color;
+            half4 highMip = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv);
+
+            return lerp(highMip, color, Scatter);
 
             #endif
         }
@@ -289,6 +300,17 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
                 #pragma vertex FullscreenVert
                 #pragma fragment FragUpsample
                 #pragma multi_compile_local _ _BLOOM_HQ
+            ENDHLSL
+        }
+
+        
+        Pass 
+        {
+            Name "Bloom Blur Alternate"
+
+            HLSLPROGRAM
+                #pragma vertex FullscreenVert
+                #pragma fragment FragBlurRadial
             ENDHLSL
         }
     }

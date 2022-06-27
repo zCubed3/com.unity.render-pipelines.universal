@@ -69,7 +69,7 @@ half3 LightingPhysicallyBased(BRDFData brdfData, BRDFData brdfDataClearCoat,
 #if defined(_CLEARCOAT) || defined(_CLEARCOATMAP)
         // Clear coat evaluates the specular a second time and has some common terms with the base specular.
         // We rely on the compiler to merge these and compute them only once.
-        half brdfCoat = kDielectricSpec.r * DirectBRDFSpecular(brdfDataClearCoat, normalWS, lightDirectionWS, viewDirectionWS);
+        half brdfCoat = kDielectricSpec.r * DirectBRDFSpecular(brdfDataClearCoat, normalWS, lightSpecularDirectionWS, viewDirectionWS);
 
             // Mix clear coat and base layer using khronos glTF recommended formula
             // https://github.com/KhronosGroup/glTF/blob/master/extensions/2.0/Khronos/KHR_materials_clearcoat/README.md

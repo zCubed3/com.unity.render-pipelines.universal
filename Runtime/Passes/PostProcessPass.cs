@@ -1143,7 +1143,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             float thresholdKnee = threshold * 0.5f; // Hardcoded soft knee
 
             // Material setup
-            float scatter = Mathf.Lerp(0.05f, 0.95f, m_Bloom.scatter.value);
+            float scatter = Mathf.Lerp(0.0f, 1.0f, m_Bloom.scatter.value);
             var bloomMaterial = m_Materials.bloom;
             bloomMaterial.SetVector(ShaderConstants._Params, new Vector4(scatter, clamp, threshold, thresholdKnee));
             CoreUtils.SetKeyword(bloomMaterial, ShaderKeywordStrings.BloomHQ, m_Bloom.highQualityFiltering.value);
@@ -1156,6 +1156,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             Blit(cmd, source, ShaderConstants._BloomMipDown[0], bloomMaterial, 0);
 
             // Downsample - gaussian pyramid
+            /*
             int lastDown = ShaderConstants._BloomMipDown[0];
             for (int i = 1; i < mipCount; i++)
             {
@@ -1178,6 +1179,40 @@ namespace UnityEngine.Rendering.Universal.Internal
 
                 lastDown = mipDown;
             }
+            */
+
+            // zCubed Additions
+            // Alternative downsampling using only one pass
+            int lastDown = ShaderConstants._BloomMipDown[0];
+            for (int i = 1; i < mipCount; i++)
+            {
+                tw = Mathf.Max(1, tw >> 1);
+                th = Mathf.Max(1, th >> 1);
+                int mipDown = ShaderConstants._BloomMipDown[i];
+                int mipUp = ShaderConstants._BloomMipUp[i];
+
+                desc.width = tw;
+                desc.height = th;
+
+                cmd.GetTemporaryRT(mipDown, desc, FilterMode.Bilinear);
+                cmd.GetTemporaryRT(mipUp, desc, FilterMode.Bilinear);
+
+                const bool useOld = false;
+
+                if (useOld) 
+                {
+                    Blit(cmd, lastDown, mipUp, bloomMaterial, 1);
+                    Blit(cmd, mipUp, mipDown, bloomMaterial, 2);
+                } 
+                else 
+                {
+                    Blit(cmd, lastDown, mipDown, bloomMaterial, 4);
+                    //Blit(cmd, mipUp, mipDown);
+                }
+
+                lastDown = mipDown;
+            }
+            // ================
 
             // Upsample (bilinear by default, HQ filtering does bicubic instead
             for (int i = mipCount - 2; i >= 0; i--)
