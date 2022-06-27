@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!200 &20000000
+ShaderVariantCollection:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: NoStripFogBlend
+  m_Shaders:
+  - first: {fileID: 4800000, guid: 9d008730222fc07468ecd17ab5bf070a, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+      - keywords: _DEPTH_MSAA_2
+        passType: 0
+      - keywords: _DEPTH_MSAA_2 _USE_DRAW_PROCEDURAL
+        passType: 0
+      - keywords: _DEPTH_MSAA_4
+        passType: 0
+      - keywords: _DEPTH_MSAA_4 _USE_DRAW_PROCEDURAL
+        passType: 0
+      - keywords: _DEPTH_MSAA_8
+        passType: 0
+      - keywords: _DEPTH_MSAA_8 _USE_DRAW_PROCEDURAL
+        passType: 0
+      - keywords: _USE_DRAW_PROCEDURAL
+        passType: 0

@@ -94,8 +94,7 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
             color = min(ClampMax, color);
 
             // Thresholding
-            //#define USE_THRESHOLDING
-            #ifdef USE_THRESHOLDING
+            #if defined(USE_THRESHOLDING)
             half brightness = Max3(color.r, color.g, color.b);
             half softness = clamp(brightness - Threshold + ThresholdKnee, 0.0, 2.0 * ThresholdKnee);
             softness = (softness * softness) / (4.0 * ThresholdKnee + 1e-4);
@@ -194,18 +193,17 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
         }
         // ================
 
-        half3 Upsample(float2 uv)
+        half4 Upsample(float2 uv)
         {
             // zCubed Additions
-            //#define URP_OLD_UPSAMPLE
-            #ifdef URP_OLD_UPSAMPLE
+            #if defined(URP_OLD_UPSAMPLE)
 
-            half3 highMip = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv));
+            half4 highMip = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv);
 
         #if _BLOOM_HQ && !defined(SHADER_API_GLES)
-            half3 lowMip = DecodeHDR(SampleTexture2DBicubic(TEXTURE2D_X_ARGS(_SourceTexLowMip, sampler_LinearClamp), uv, _SourceTexLowMip_TexelSize.zwxy, (1.0).xx, unity_StereoEyeIndex));
+            half4 lowMip = SampleTexture2DBicubic(TEXTURE2D_X_ARGS(_SourceTexLowMip, sampler_LinearClamp), uv, _SourceTexLowMip_TexelSize.zwxy, (1.0).xx, unity_StereoEyeIndex);
         #else
-            half3 lowMip = DecodeHDR(SAMPLE_TEXTURE2D_X(_SourceTexLowMip, sampler_LinearClamp, uv));
+            half4 lowMip = SAMPLE_TEXTURE2D_X(_SourceTexLowMip, sampler_LinearClamp, uv);
         #endif
 
             return lerp(highMip, lowMip, Scatter);
@@ -246,9 +244,9 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
             
             // URP Old
-            half3 color = Upsample(UnityStereoTransformScreenSpaceTex(input.uv));
+            half4 color = Upsample(UnityStereoTransformScreenSpaceTex(input.uv));
 
-            return EncodeHDR(color);
+            return color;
         }
 
     ENDHLSL
