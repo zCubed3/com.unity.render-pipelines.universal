@@ -302,6 +302,7 @@ float PCF_Filter(float2 uv, float zReciever, float filterRadiusUV, TEXTURE2D_SHA
 {
     float sum = 0;
 
+    [unroll]
     for (int i = 0; i < PCF_SAMPLES; ++i) {
         float2 offset = GetPCSSPoisson(i) * filterRadiusUV;
         sum += ShadowMap.SampleCmpLevelZero(sampler_ShadowMap, uv + offset * samplingData.shadowmapSize.xy, zReciever);

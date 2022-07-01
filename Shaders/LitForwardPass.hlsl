@@ -220,14 +220,16 @@ half4 LitPassFragment(Varyings input) : SV_Target
     SETUP_DEBUG_TEXTURE_DATA(inputData, input.uv, _BaseMap);
 
     // zCubed Additions
+    
+    // The compiler should optimize this out if its unused
     half NdotV = saturate(dot(inputData.normalWS, inputData.viewDirectionWS));
+    
+    #if defined(_EMISSION)
     half emissionFade = lerp(1, pow(NdotV, _EmissionFalloff * 2), saturate(_EmissionFalloff));
-
-    [branch]
-    if (_EmissionFalloff <= 0.001)
-        emissionFade = 1;
+    emissionFade = lerp(emissionFade, 1, _EmissionFalloff < 0.001);
 
     surfaceData.emission *= saturate(emissionFade);
+    #endif
     // ----------------
 
 #ifdef _DBUFFER

@@ -41,6 +41,12 @@ namespace UnityEngine.Rendering.Universal.Additions
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
+            var additionalCameraData = renderingData.cameraData.camera.GetUniversalAdditionalCameraData();
+
+            if (!additionalCameraData.renderVolumetrics)
+                return;
+
+
             if (fogPass.samplerCS == null)
                 fogPass.samplerCS = settings.samplerCS == null ? Resources.Load<ComputeShader>("VolumetricSampler") : settings.samplerCS;
 

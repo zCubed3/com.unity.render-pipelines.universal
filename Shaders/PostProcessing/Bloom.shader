@@ -4,6 +4,7 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
         #pragma exclude_renderers gles
         #pragma multi_compile_local _ _USE_RGBM
         #pragma multi_compile _ _USE_DRAW_PROCEDURAL
+        #pragma multi_compile _ UNITY_SINGLE_PASS_STEREO
 
         #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
         #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Filtering.hlsl"
@@ -154,6 +155,7 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
         // zCubed Additions
         half4 FragBlurRadial(Varyings input) : SV_TARGET
         {
+            UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
             float2 uv = input.uv;
 
             //https://www.froyok.fr/blog/2021-12-ue4-custom-bloom/
@@ -186,7 +188,10 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
             for( int i = 0; i < 13; i++ )
             {
                 float2 currentUV = uv + COORDS[i] * _SourceTex_TexelSize.xy;
-                color += WEIGHTS[i] * SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, currentUV);
+                float bias = currentUV.x > 1 || currentUV.x < 0 || currentUV.y > 1 || currentUV.x < 0;
+                //float bias = 0;
+
+                color += WEIGHTS[i] * SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, currentUV) * (1 - bias);
             }
 
             return color;
@@ -229,7 +234,10 @@ Shader "Hidden/Universal Render Pipeline/Bloom"
             for( int i = 0; i < 9; i++ )
             {
                 float2 currentUV = uv + COORDS[i] * _SourceTexLowMip_TexelSize.xy;
-                color += WEIGHTS[i] * SAMPLE_TEXTURE2D_X(_SourceTexLowMip, sampler_LinearClamp, currentUV);
+                //float bias = currentUV.x > 1 || currentUV.x < 0 || currentUV.y > 1 || currentUV.x < 0;
+                float bias = 0;
+
+                color += WEIGHTS[i] * SAMPLE_TEXTURE2D_X(_SourceTexLowMip, sampler_LinearClamp, currentUV) * (1 - bias);
             }
 
             half4 highMip = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_LinearClamp, uv);

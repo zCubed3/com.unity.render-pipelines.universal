@@ -1,7 +1,7 @@
 {
   "name": "com.unity.render-pipelines.universal",
   "description": "A fork of Unity's 'Universal Render Pipeline' to add various new features and specific improvements!",
-  "version": "12.1.6-1",
+  "version": "12.1.6",
   "unity": "2021.2",
   "displayName": "Prisma RP",
   "dependencies": {
@@ -24,8 +24,5 @@
       "description": "Collection of scenes showcasing different features of the Universal Render Pipeline.",
       "path": "Samples~/URPPackageSamples"
     }
-  ],
-  "author": {
-    "name": "zCubed"
-  }
+  ]
 }

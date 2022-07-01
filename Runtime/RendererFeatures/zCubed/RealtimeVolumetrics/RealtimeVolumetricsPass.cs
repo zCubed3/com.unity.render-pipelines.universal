@@ -99,9 +99,6 @@ namespace UnityEngine.Rendering.Universal.Additions
         {
             var additionalCameraData = renderingData.cameraData.camera.GetUniversalAdditionalCameraData();
 
-            if (!additionalCameraData.renderVolumetrics)
-                return;
-
             RenderTextureDescriptor desc = renderingData.cameraData.cameraTargetDescriptor;
 
             desc.width = Mathf.CeilToInt((float)desc.width * additionalCameraData.volumetricsPercent);
@@ -133,9 +130,6 @@ namespace UnityEngine.Rendering.Universal.Additions
         {
             var additionalCameraData = renderingData.cameraData.camera.GetUniversalAdditionalCameraData();
             var renderer = renderingData.cameraData.renderer as UniversalRenderer;
-
-            if (!additionalCameraData.renderVolumetrics)
-                return;
 
             int kernel = samplerCS.FindKernel("CSMain");
 
@@ -278,19 +272,14 @@ namespace UnityEngine.Rendering.Universal.Additions
                 }
             }
 
-            if (actual > 0)
-            {
-                cmd.SetComputeVectorParam(samplerCS, Properties._AdditionalLightsCount, new Vector4(actual, 0, 0, 0));
-                cmd.SetComputeVectorArrayParam(samplerCS, Properties._AdditionalLightsPosition, additionalLightsPosition);
-                cmd.SetComputeVectorArrayParam(samplerCS, Properties._AdditionalLightsColor, additionalLightsColor);
-                cmd.SetComputeVectorArrayParam(samplerCS, Properties._AdditionalLightsAttenuation, additionalLightsAttenuation);
-                cmd.SetComputeVectorArrayParam(samplerCS, Properties._AdditionalLightsSpotDir, additionalLightsSpotDir);
-                cmd.SetComputeVectorArrayParam(samplerCS, Properties._AdditionalShadowParams, additionalLightPass.additionalLightIndexToShadowParams);
-                cmd.SetComputeMatrixArrayParam(samplerCS, Properties._AdditionalLightsWorldToShadow, additionalLightPass.additionalLightShadowSliceIndexTo_WorldShadowMatrix);
-                cmd.SetComputeVectorArrayParam(samplerCS, Properties._AdditionalLightsFogParams, additionalLightsFogParams);
-            }
-            else
-                cmd.SetComputeVectorParam(samplerCS, Properties._AdditionalLightsCount, Vector4.zero);
+            cmd.SetComputeVectorParam(samplerCS, Properties._AdditionalLightsCount, new Vector4(actual, 0, 0, 0));
+            cmd.SetComputeVectorArrayParam(samplerCS, Properties._AdditionalLightsPosition, additionalLightsPosition);
+            cmd.SetComputeVectorArrayParam(samplerCS, Properties._AdditionalLightsColor, additionalLightsColor);
+            cmd.SetComputeVectorArrayParam(samplerCS, Properties._AdditionalLightsAttenuation, additionalLightsAttenuation);
+            cmd.SetComputeVectorArrayParam(samplerCS, Properties._AdditionalLightsSpotDir, additionalLightsSpotDir);
+            cmd.SetComputeVectorArrayParam(samplerCS, Properties._AdditionalShadowParams, additionalLightPass.additionalLightIndexToShadowParams);
+            cmd.SetComputeMatrixArrayParam(samplerCS, Properties._AdditionalLightsWorldToShadow, additionalLightPass.additionalLightShadowSliceIndexTo_WorldShadowMatrix);
+            cmd.SetComputeVectorArrayParam(samplerCS, Properties._AdditionalLightsFogParams, additionalLightsFogParams);
 
             //
             // Light cookies
