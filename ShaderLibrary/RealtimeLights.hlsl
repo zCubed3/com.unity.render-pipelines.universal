@@ -356,6 +356,14 @@ Light GetAdditionalLight(uint i, InputData inputData)
     return GetAdditionalPerObjectLight(lightIndex, inputData);
 }
 
+Light GetAdditionalLight(uint i, float3 positionWS)
+{
+    InputData data = (InputData)0;
+    data.positionWS = positionWS;
+
+    return GetAdditionalLight(i, data);
+}
+
 Light GetAdditionalLight(uint i, InputData inputData, half4 shadowMask)
 {
 #if USE_CLUSTERED_LIGHTING
