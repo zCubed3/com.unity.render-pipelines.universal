@@ -454,6 +454,8 @@ namespace UnityEngine.Rendering.Universal.Internal
             }
 
             // Motion blur
+            // TEMP: Disabled, use kMotion instead
+            /*
             if (useMotionBlur)
             {
                 using (new ProfilingScope(cmd, ProfilingSampler.Get(URPProfileId.MotionBlur)))
@@ -462,6 +464,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                     Swap(ref renderer);
                 }
             }
+            */
 
             // Panini projection is done as a fullscreen pass after all depth-based effects are done
             // and before bloom kicks in

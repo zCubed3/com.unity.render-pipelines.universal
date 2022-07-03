@@ -367,7 +367,24 @@ Shader "Universal Render Pipeline/Lit"
 
             ENDHLSL
         }
+        Pass
+        {
+            Name "MotionVectors"
+            Tags{ "LightMode" = "MotionVectors" }
 
+            ZWrite[_ZWrite]
+            Cull[_Cull]
+
+            HLSLPROGRAM
+			#pragma target 4.5
+
+            #pragma multi_compile_instancing
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/LitMotionVectors.hlsl"
+
+            #pragma vertex vert
+            #pragma fragment frag
+            ENDHLSL
+        }
         Pass
         {
             Name "Universal2D"

@@ -242,8 +242,6 @@ half SampleScreenSpaceShadowmap(float4 shadowCoord)
 #define BLOCKER_SAMPLES 16
 #define PCF_SAMPLES 16
 
-//SAMPLER(sampler_PointClampShadow);
-
 float2 GetPCSSPoisson(int i) 
 {
     const float2 PCSS_POISSON_DISKS[16] = {
@@ -273,6 +271,8 @@ float2 GetPCSSPoisson(int i)
 // y: Radius
 
 /*
+SAMPLER(sampler_PointClampShadow);
+
 float EstimatePenumbra(float zReciever, float zBlocker) 
 {
     return (zReciever - zBlocker) / zBlocker;
@@ -321,7 +321,7 @@ float PCSS(TEXTURE2D_SHADOW_PARAM(ShadowMap, sampler_ShadowMap), float4 shadowCo
     FindBlocker(avgDepth, numBlockers, uv, zReciever, pcssParams, TEXTURE2D_SHADOW_ARGS(ShadowMap, sampler_ShadowMap), samplingData);
 
     if (numBlockers < 1)
-        return 1;
+        return 0;
 
     float penumbraSize = EstimatePenumbra(zReciever, avgDepth);
     float filterRadiusUV = penumbraSize * pcssParams.y * pcssParams.x / shadowCoord.z;
@@ -329,6 +329,7 @@ float PCSS(TEXTURE2D_SHADOW_PARAM(ShadowMap, sampler_ShadowMap), float4 shadowCo
     return PCF_Filter(uv, zReciever, 2.0, TEXTURE2D_SHADOW_ARGS(ShadowMap, sampler_ShadowMap), samplingData);
 }
 */
+
 
 real SampleShadowmapFiltered(TEXTURE2D_SHADOW_PARAM(ShadowMap, sampler_ShadowMap), float4 shadowCoord, half4 pcssParams, ShadowSamplingData samplingData)
 {
