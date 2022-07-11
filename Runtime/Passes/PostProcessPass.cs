@@ -1200,6 +1200,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                 cmd.GetTemporaryRT(mipDown, desc, FilterMode.Bilinear);
                 cmd.GetTemporaryRT(mipUp, desc, FilterMode.Bilinear);
 
+                /*
                 const bool useOld = false;
 
                 if (useOld) 
@@ -1207,11 +1208,9 @@ namespace UnityEngine.Rendering.Universal.Internal
                     Blit(cmd, lastDown, mipUp, bloomMaterial, 1);
                     Blit(cmd, mipUp, mipDown, bloomMaterial, 2);
                 } 
-                else 
-                {
-                    Blit(cmd, lastDown, mipDown, bloomMaterial, 4);
-                    //Blit(cmd, mipUp, mipDown);
-                }
+                */
+                
+                Blit(cmd, lastDown, mipDown, bloomMaterial, 4);
 
                 lastDown = mipDown;
             }
