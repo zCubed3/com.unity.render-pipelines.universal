@@ -271,6 +271,16 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
             }
         }
 
+        // zCubed Additions
+        [SerializeField]
+        bool m_MayWriteMotionVectors = true;
+
+        public bool mayWriteMotionVectors
+        {
+            get => m_MayWriteMotionVectors;
+            set => m_MayWriteMotionVectors = value;
+        }
+
         public override bool IsActive()
         {
             bool isUniversalRenderPipeline = GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset;
@@ -501,7 +511,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
 
                 registerUndo("Change Cast Shadows");
                 castShadows = evt.newValue;
-                onChange();
+                onChange(); 
             });
 
             if (showReceiveShadows)
@@ -514,6 +524,17 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
                     receiveShadows = evt.newValue;
                     onChange();
                 });
+
+            // zCubed Additions
+            context.AddProperty("May Write Motion Vectors", new Toggle() { value = mayWriteMotionVectors }, (evt) =>
+            {
+                if (Equals(mayWriteMotionVectors, evt.newValue))
+                    return;
+
+                registerUndo("Change May Write Motion Vectors");
+                mayWriteMotionVectors = evt.newValue;
+                onChange();
+            });
         }
 
         public bool TrySetActiveSubTarget(Type subTargetType)
@@ -1028,6 +1049,45 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
 
             return result;
         }
+
+        public static PassDescriptor MotionVectors(UniversalTarget target)
+        {
+            var result = new PassDescriptor()
+            {
+                // Definition
+                displayName = "MotionVectors",
+                referenceName = "SHADERPASS_MOTIONVECTORS",
+                lightMode = "MotionVectors",
+                useInPreview = false,
+
+                // Template
+                passTemplatePath = UniversalTarget.kUberTemplatePath,
+                sharedTemplateDirectories = UniversalTarget.kSharedTemplateDirectories,
+
+                // Port Mask
+                validVertexBlocks = CoreBlockMasks.Vertex,
+                validPixelBlocks = CoreBlockMasks.FragmentColorAlpha,
+
+                // Fields
+                structs = CoreStructCollections.Default,
+                fieldDependencies = CoreFieldDependencies.Default,
+
+                // Conditional State
+                renderStates = CoreRenderStates.Default,
+                pragmas = CorePragmas.Instanced,
+                defines = new DefineCollection(),
+                keywords = new KeywordCollection(),
+                includes = CoreIncludes.MotionVectors,
+
+                // Custom Interpolator Support
+                customInterpolators = CoreCustomInterpDescriptors.Common
+            };
+
+            AddAlphaClipControlToPass(ref result, target);
+
+            return result;
+        }
+
     }
     #endregion
 
@@ -1383,6 +1443,9 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
         const string kTextureStack = "Packages/com.unity.render-pipelines.core/ShaderLibrary/TextureStack.hlsl";
         const string kDBuffer = "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DBuffer.hlsl";
         const string kSelectionPickingPass = "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/SelectionPickingPass.hlsl";
+        
+        // zCubed Additions
+        const string kMotionVectorPass = "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/MotionVectorPass.hlsl";
 
         public static readonly IncludeCollection CorePregraph = new IncludeCollection
         {
@@ -1462,6 +1525,17 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
             // Post-graph
             { CorePostgraph },
             { kSelectionPickingPass, IncludeLocation.Postgraph },
+        };
+
+        public static readonly IncludeCollection MotionVectors = new IncludeCollection
+        {
+            // Pre-graph
+            { CorePregraph },
+            { ShaderGraphPregraph },
+
+            // Post-graph
+            { CorePostgraph },
+            { kMotionVectorPass, IncludeLocation.Postgraph },
         };
     }
     #endregion

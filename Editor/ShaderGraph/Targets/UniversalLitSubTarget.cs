@@ -316,6 +316,10 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
 
                 result.passes.Add(PassVariant(LitPasses._2D(target), CorePragmas.DOTSDefault));
 
+                // zCubed Additions
+                if (target.mayWriteMotionVectors)
+                    result.passes.Add(PassVariant(CorePasses.MotionVectors(target), CorePragmas.DOTSInstanced));
+
                 return result;
             }
 

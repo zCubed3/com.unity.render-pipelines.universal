@@ -33,12 +33,17 @@ namespace UnityEditor.Rendering.Universal
         }
 
         public override void OnInspectorGUI()
-        {
-            PropertyField(m_Threshold);
+        {            
+            // zCubed: Disabled due to new bloom
+            //PropertyField(m_Threshold);
+            
             PropertyField(m_Intensity);
             PropertyField(m_Scatter);
             PropertyField(m_Tint);
-            PropertyField(m_Clamp);
+            
+            // zCubed: Disabled due to new bloom
+            //PropertyField(m_Clamp);
+
             PropertyField(m_HighQualityFiltering);
 
             if (m_HighQualityFiltering.overrideState.boolValue && m_HighQualityFiltering.value.boolValue && CoreEditorUtils.buildTargets.Contains(GraphicsDeviceType.OpenGLES2))

@@ -252,7 +252,7 @@ inline void InitializeStandardLitSurfaceData(float2 uv, out SurfaceData outSurfa
     // zCubed Additions
     // zCubed: My version of occlusion with "normal -> occlusion"
     float2 normalABS = abs(outSurfaceData.normalTS.xy * outSurfaceData.normalTS.xy);
-    float normalAO = LerpOneTo((1 - (normalABS.x + normalABS.y)) * (outSurfaceData.normalTS.z), _BumpToOcclusion);
+    float normalAO = LerpOneTo((1 - (normalABS.x + normalABS.y)) * (outSurfaceData.normalTS.z), _BumpToOcclusion / 2.0);
     outSurfaceData.occlusion = SampleOcclusion(uv) * normalAO;
     // ----------------
 

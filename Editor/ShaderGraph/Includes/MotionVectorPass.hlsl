@@ -1,10 +1,6 @@
 // -------------------------------------
-// Includes
-#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-
-// -------------------------------------
 // Structs
-struct Attributes
+struct MotionVectorAttributes
 {
     float4 position             : POSITION;
     float3 positionOld          : TEXCOORD4;
@@ -12,7 +8,7 @@ struct Attributes
     UNITY_VERTEX_INPUT_INSTANCE_ID
 };
 
-struct Varyings
+struct MotionVectorVaryings
 {
     float4 positionCS           : SV_POSITION;
     float4 positionVP           : TEXCOORD0;
@@ -26,9 +22,9 @@ float _kMotionPerObjectFac;
 
 // -------------------------------------
 // Vertex
-Varyings vert(Attributes input)
+MotionVectorVaryings vert(MotionVectorAttributes input)
 {
-    Varyings output = (Varyings)0;
+    MotionVectorVaryings output = (MotionVectorVaryings)0;
     UNITY_SETUP_INSTANCE_ID(input);
     UNITY_TRANSFER_INSTANCE_ID(input, output);
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
@@ -50,7 +46,7 @@ Varyings vert(Attributes input)
 
 // -------------------------------------
 // Fragment
-half4 frag(Varyings input) : SV_Target
+half4 frag(MotionVectorVaryings input) : SV_Target
 {   
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
@@ -77,7 +73,7 @@ half4 frag(Varyings input) : SV_Target
     return half4(velocity.xy * 0.5, 0, 0) * _kMotionPerObjectFac;
 }
 
-half4 frag_zero(Varyings input) : SV_Target
+half4 frag_zero(MotionVectorVaryings input) : SV_Target
 {
     return 0;  
 }
