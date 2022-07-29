@@ -10,6 +10,7 @@ TEXTURE2D(_AdditionalLightsCookieAtlasTexture);
 // Samplers
 SAMPLER(sampler_MainLightCookieTexture);
 SAMPLER(sampler_AdditionalLightsCookieAtlasTexture);
+SAMPLER(sampler_CookieLinearRepeat);
 
 // Buffers
 // GLES3 causes a performance regression in some devices when using CBUFFER.
@@ -94,12 +95,14 @@ bool IsAdditionalLightsCookieAtlasTextureAlphaFormat()
 
 real4 SampleMainLightCookieTexture(float2 uv)
 {
-    return SAMPLE_TEXTURE2D(_MainLightCookieTexture, sampler_MainLightCookieTexture, uv);
+    return SAMPLE_TEXTURE2D(_MainLightCookieTexture, sampler_CookieLinearRepeat, uv);
+    //return SAMPLE_TEXTURE2D(_MainLightCookieTexture, sampler_MainLightCookieTexture, uv);
 }
 
 real4 SampleAdditionalLightsCookieAtlasTexture(float2 uv)
 {
-    return SAMPLE_TEXTURE2D(_AdditionalLightsCookieAtlasTexture, sampler_AdditionalLightsCookieAtlasTexture, uv);
+    return SAMPLE_TEXTURE2D(_AdditionalLightsCookieAtlasTexture, sampler_CookieLinearRepeat, uv);
+    //return SAMPLE_TEXTURE2D(_AdditionalLightsCookieAtlasTexture, sampler_AdditionalLightsCookieAtlasTexture, uv);
 }
 
 // Helpers
