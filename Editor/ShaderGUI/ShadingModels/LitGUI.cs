@@ -121,6 +121,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             public MaterialProperty emissionFalloffProp;
             public MaterialProperty emissionMultiplyProp;
             public MaterialProperty occlusionContributionProp;
+            public MaterialProperty emissionOcclusionProp;
             // ----------------
 
             public LitProperties(MaterialProperty[] properties)
@@ -162,6 +163,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
                     emissionFalloffProp = BaseShaderGUI.FindProperty("_EmissionFalloff", properties);
                     emissionMultiplyProp = BaseShaderGUI.FindProperty("_EmissionMultiply", properties);
                     occlusionContributionProp = BaseShaderGUI.FindProperty("_OcclusionContribution", properties);
+                    emissionOcclusionProp = BaseShaderGUI.FindProperty("_EmissionOcclusion", properties);
                 }
                 catch 
                 {
@@ -171,6 +173,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
                     emissionFalloffProp = null;
                     emissionMultiplyProp = null;
                     occlusionContributionProp = null;
+                    emissionOcclusionProp = null;
                 }
             }
         }

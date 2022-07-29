@@ -366,7 +366,7 @@ namespace UnityEditor
             }
         }
 
-        protected virtual void DrawEmissionProperties(Material material, bool keyword, MaterialProperty emissionFalloffProp = null, MaterialProperty emissionMultiplyProp = null)
+        protected virtual void DrawEmissionProperties(Material material, bool keyword, MaterialProperty emissionFalloffProp = null, MaterialProperty emissionMultiplyProp = null, MaterialProperty emissionOcclusionProp = null, bool shouldDrawOcclusionProp = false)
         {
             var emissive = true;
 
@@ -398,6 +398,9 @@ namespace UnityEditor
 
                     if (emissionFalloffProp != null)
                         materialEditor.RangeProperty(emissionFalloffProp, "Falloff");
+
+                    if (emissionOcclusionProp != null && shouldDrawOcclusionProp) 
+                        materialEditor.RangeProperty(emissionOcclusionProp, "Occlusion");
 
                     if (emissionMultiplyProp != null)
                     {

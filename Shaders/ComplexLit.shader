@@ -77,6 +77,7 @@ Shader "Universal Render Pipeline/Complex Lit"
         _EmissionMultiply("Emission Multiply", Float) = 0.0
 
         _OcclusionContribution("AO Contribution", Vector) = (1.0, 1.0, 1.0, 1.0)
+        _EmissionOcclusion("Emission Occlusion", Range(0, 1)) = 1.0
     }
 
     SubShader

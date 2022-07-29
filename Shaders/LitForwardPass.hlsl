@@ -229,6 +229,11 @@ half4 LitPassFragment(Varyings input) : SV_Target
     emissionFade = lerp(emissionFade, 1, _EmissionFalloff < 0.001);
 
     surfaceData.emission *= saturate(emissionFade);
+
+    #if defined(_OCCLUSIONMAP)
+    surfaceData.emission *= lerp(1, surfaceData.occlusion, _EmissionOcclusion);
+    #endif
+
     #endif
     // ----------------
 
