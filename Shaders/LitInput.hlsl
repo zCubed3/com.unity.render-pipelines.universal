@@ -35,6 +35,7 @@ half _BumpToOcclusion;
 half _EmissionFalloff;
 half4 _OcclusionContribution;
 half _EmissionOcclusion;
+half _EmissionBakeMultipler;
 // ----------------
 
 CBUFFER_END
@@ -63,7 +64,8 @@ UNITY_DOTS_INSTANCING_START(MaterialPropertyMetadata)
     UNITY_DOTS_INSTANCED_PROP(float , _BumpToOcclusion)
     UNITY_DOTS_INSTANCED_PROP(float , _EmissionFalloff)
     UNITY_DOTS_INSTANCED_PROP(float4, _OcclusionContribution)
-    UNITY_DOTS_INSTANCED_PROP(float4, _EmissionOcclusion)
+    UNITY_DOTS_INSTANCED_PROP(float, _EmissionOcclusion)
+    UNITY_DOTS_INSTANCED_PROP(float, _EmissionBakeMultipler)
     // ----------------
 UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
 
@@ -87,6 +89,7 @@ UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
 #define _EmissionFalloff        UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float  , Metadata_EmissionFalloff)
 #define _OcclusionContribution  UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4 , Metadata_OcclusionContribution)
 #define _EmissionOcclusion      UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float , Metadata_EmissionOcclusion)
+#define _EmissionBakeMultipler  UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float , Metadata_EmissionBakeMultipler)
 // ----------------
 #endif
 

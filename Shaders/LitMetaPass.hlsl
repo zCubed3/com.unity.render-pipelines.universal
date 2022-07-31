@@ -13,7 +13,7 @@ half4 UniversalFragmentMetaLit(Varyings input) : SV_Target
 
     MetaInput metaInput;
     metaInput.Albedo = brdfData.diffuse + brdfData.specular * brdfData.roughness * 0.5;
-    metaInput.Emission = surfaceData.emission;
+    metaInput.Emission = surfaceData.emission * abs(_EmissionBakeMultipler);
     return UniversalFragmentMeta(input, metaInput);
 }
 #endif

@@ -366,7 +366,7 @@ namespace UnityEditor
             }
         }
 
-        protected virtual void DrawEmissionProperties(Material material, bool keyword, MaterialProperty emissionFalloffProp = null, MaterialProperty emissionMultiplyProp = null, MaterialProperty emissionOcclusionProp = null, bool shouldDrawOcclusionProp = false)
+        protected virtual void DrawEmissionProperties(Material material, bool keyword, MaterialProperty emissionFalloffProp = null, MaterialProperty emissionMultiplyProp = null, MaterialProperty emissionOcclusionProp = null, bool shouldDrawOcclusionProp = false, MaterialProperty emissionGIMultiplierProp = null)
         {
             var emissive = true;
 
@@ -411,6 +411,9 @@ namespace UnityEditor
                         if (material.HasProperty("_EmissionMultiply"))
                             CoreUtils.SetKeyword(material, ShaderKeywordStrings._ALBEDO_EMISSION_MULTIPLY, enabled);
                     }
+
+                    if (emissionGIMultiplierProp != null) 
+                        materialEditor.FloatProperty(emissionGIMultiplierProp, "GI Multiplier");
 
                     EditorGUI.indentLevel -= 2;
                     // ----------------
