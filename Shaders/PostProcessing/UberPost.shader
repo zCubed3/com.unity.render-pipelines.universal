@@ -250,7 +250,7 @@ Shader "Hidden/Universal Render Pipeline/UberPost"
 
     SubShader
     {
-        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline"}
+        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" }
         LOD 100
         ZTest Always ZWrite Off Cull Off
 
