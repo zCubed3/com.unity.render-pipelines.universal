@@ -1,0 +1,79 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+RWTexture2D<float4> _Result;
+
+float4 _SliceData;
+
+float4 _LightAtten;
+float4 _LightDir;
+float4 _LightPos;
+
+float4x4 _BakeMatrix;
+
+float DistanceAttenuation(float distanceSqr, half2 distanceAttenuation)
+{
+    // We use a shared distance attenuation for additional directional and puctual lights
+    // for directional lights attenuation will be 1
+    float lightAtten = rcp(distanceSqr);
+    float2 distanceAttenuationFloat = float2(distanceAttenuation);
+
+#if SHADER_HINT_NICE_QUALITY
+    // Use the smoothing factor also used in the Unity lightmapper.
+    half factor = half(distanceSqr * distanceAttenuationFloat.x);
+    half smoothFactor = saturate(half(1.0) - factor * factor);
+    smoothFactor = smoothFactor * smoothFactor;
+#else
+    // We need to smoothly fade attenuation to light range. We start fading linearly at 80% of light range
+    // Therefore:
+    // fadeDistance = (0.8 * 0.8 * lightRangeSq)
+    // smoothFactor = (lightRangeSqr - distanceSqr) / (lightRangeSqr - fadeDistance)
+    // We can rewrite that to fit a MAD by doing
+    // distanceSqr * (1.0 / (fadeDistanceSqr - lightRangeSqr)) + (-lightRangeSqr / (fadeDistanceSqr - lightRangeSqr)
+    // distanceSqr *        distanceAttenuation.y            +             distanceAttenuation.z
+    half smoothFactor = half(saturate(distanceSqr * distanceAttenuationFloat.x + distanceAttenuationFloat.y));
+#endif
+
+    return lightAtten * smoothFactor;
+}
+
+half AngleAttenuation(half3 spotDirection, half3 lightDirection, half2 spotAttenuation)
+{
+    // Spot Attenuation with a linear falloff can be defined as
+    // (SdotL - cosOuterAngle) / (cosInnerAngle - cosOuterAngle)
+    // This can be rewritten as
+    // invAngleRange = 1.0 / (cosInnerAngle - cosOuterAngle)
+    // SdotL * invAngleRange + (-cosOuterAngle * invAngleRange)
+    // SdotL * spotAttenuation.x + spotAttenuation.y
+
+    // If we precompute the terms in a MAD instruction
+    half SdotL = dot(spotDirection, lightDirection);
+    half atten = saturate(SdotL * spotAttenuation.x + spotAttenuation.y);
+    return atten * atten;
+}
+
+[numthreads(32, 32, 1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    uint width, height;
+    _Result.GetDimensions(width, height);
+    
+    float2 uv = id.xy / float2(width, height);
+    float2 coord = uv * 2 - 1;
+    
+    float w = _SliceData.x / (_SliceData.y - 1);
+    w = w * 2 - 1;
+    
+    float3 sPoint = mul(_BakeMatrix, float4(coord, w, 1));
+    
+    float4 lAtten = _LightAtten;
+    float4 lSpotDir = _LightDir;
+    float3 lVector = _LightPos.xyz - sPoint * _LightPos.w;
+    
+    float dSqr = max(dot(lVector, lVector), 0.0);
+    half3 lDir = half3(lVector * rsqrt(dSqr));
+    
+    half attenuation = half(DistanceAttenuation(dSqr, lAtten.xy) * AngleAttenuation(lSpotDir.xyz, lDir, lAtten.zw));
+    
+    _Result[id.xy] = float4(attenuation.rrr, 0);
+}

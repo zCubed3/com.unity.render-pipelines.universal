@@ -63,12 +63,12 @@ namespace UnityEngine.Rendering.Universal.Additions
         [Header("Result")]
         public Texture3D buffer;
 
-        public Material shadowCasterMaterial;
-        public RenderTexture tempVis;
-        public ComputeShader bakeCS;
+        protected ComputeShader bakeCS;
 
         public void OnEnable()
         {
+            bakeCS = Resources.Load<ComputeShader>("VolumetricsBaker");
+
             bakedVolumes.Add(this);
 
 #if UNITY_EDITOR
