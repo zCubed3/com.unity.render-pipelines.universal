@@ -17,7 +17,7 @@ namespace UnityEngine.Rendering.Universal.Additions
         {
             None = 0,
 
-            //Direct = 1,
+            Direct = 1,
             Indirect = 2,
 
             All = ~0
@@ -62,6 +62,10 @@ namespace UnityEngine.Rendering.Universal.Additions
 
         [Header("Result")]
         public Texture3D buffer;
+
+        public Material shadowCasterMaterial;
+        public RenderTexture tempVis;
+        public ComputeShader bakeCS;
 
         public void OnEnable()
         {
@@ -119,10 +123,103 @@ namespace UnityEngine.Rendering.Universal.Additions
             return transform.TransformPoint(point);
         }
 
-        // TODO?
         void BakeDirect(ref Texture3D texture)
         {
+            List<Light> bakedLights = new List<Light>();
+            List<Renderer> staticRenderers = new List<Renderer>();
 
+            foreach (Light light in Object.FindObjectsOfType<Light>())
+            {
+                if (!light.enabled || !light.gameObject.activeInHierarchy)
+                    continue;
+
+                var additionalData = light.GetUniversalAdditionalLightData();
+
+                if (additionalData.volumetricsLightMode == RenderVolumetrics.VolumeLightMode.Baked)
+                    bakedLights.Add(light);
+            }
+
+            /*
+            foreach (Renderer renderer in Object.FindObjectsOfType<Renderer>())
+            {
+                if (renderer.gameObject.isStatic || renderer.staticShadowCaster)
+                    staticRenderers.Add(renderer);
+            }
+            */
+
+            // For each light we need to render the shadows, then process the light inside the volume w/ shadowing
+            //RenderTexture shadowBuffer = new RenderTexture(1024, 1024, 32, RenderTextureFormat.RFloat);
+            //shadowBuffer.Create();
+
+            RenderTexture volumeBuffer = new RenderTexture(bufferWidth, bufferHeight, 0, RenderTextureFormat.ARGBHalf);
+            volumeBuffer.enableRandomWrite = true;
+            volumeBuffer.Create();
+
+            //CommandBuffer buffer = CommandBufferPool.Get("BAKED VOLUME SHADOWS");
+
+            foreach (Light light in bakedLights)
+            {
+                //buffer.Clear();
+
+                //buffer.SetViewport(new Rect(0, 0, shadowBuffer.width, shadowBuffer.height));
+                //buffer.SetRenderTarget(shadowBuffer);
+
+                Vector3 origin = light.transform.position;
+                Vector3 forward = light.transform.forward;
+                Vector3 up = light.transform.up;
+
+                Matrix4x4 look = Matrix4x4.LookAt(origin, origin + forward, -up);
+                Matrix4x4 view = Matrix4x4.LookAt(origin, origin - forward, up).inverse;
+                Matrix4x4 proj = Matrix4x4.Perspective(light.spotAngle, 1, 0.01F, 100F);
+
+                /*
+                buffer.SetViewProjectionMatrices(view, proj);
+
+                foreach (Renderer renderer in staticRenderers)
+                    buffer.DrawRenderer(renderer, shadowCasterMaterial);
+
+                Graphics.ExecuteCommandBuffer(buffer);
+                */
+
+                UniversalRenderPipeline.GetLightAttenuationAndSpotDirection(light.type, light.range, look, light.spotAngle, light.innerSpotAngle, out Vector4 atten, out Vector4 dir);
+
+                int kernel = bakeCS.FindKernel("CSMain");
+                bakeCS.GetKernelThreadGroupSizes(kernel, out uint xTileSize, out uint yTileSize, out uint zTileSize);
+
+                int tilesX = Mathf.CeilToInt(bufferWidth / (float)xTileSize);
+                int tilesY = Mathf.CeilToInt(bufferDepth / (float)yTileSize);
+                bakeCS.SetTexture(kernel, "_Result", volumeBuffer);
+
+                bakeCS.SetMatrix("_BakeMatrix", Matrix4x4.TRS(transform.position + bounds.center, transform.rotation, bounds.extents));
+
+                bakeCS.SetVector("_LightAtten", atten);
+                bakeCS.SetVector("_LightDir", dir);
+                bakeCS.SetVector("_LightPos", new Vector4(origin.x, origin.y, origin.z, 1.0F));
+
+                for (int s = 0; s < bufferDepth; s++) 
+                {
+                    bakeCS.SetVector("_SliceData", new Vector4(s, bufferHeight));
+                    bakeCS.Dispatch(kernel, tilesX, tilesY, 1);
+
+                    RenderTexture.active = volumeBuffer;
+                    Texture2D dupe = new Texture2D(volumeBuffer.width, volumeBuffer.height, TextureFormat.RGBAHalf, false);
+                    dupe.ReadPixels(new Rect(0, 0, dupe.width, dupe.height), 0, 0);
+
+                    for (int x = 0; x < bufferWidth; x++)
+                        for (int y = 0; y < bufferDepth; y++)
+                        {
+                            Color color = dupe.GetPixel(x, y) * light.color * light.intensity + texture.GetPixel(x, y, s);
+                            texture.SetPixel(x, y, s, color);
+                        }
+
+                    texture.Apply();
+                }
+            }
+
+            RenderTexture.active = null;
+
+            //shadowBuffer.Release();
+            volumeBuffer.Release();
         }
 
         // CPU only!
@@ -160,6 +257,8 @@ namespace UnityEngine.Rendering.Universal.Additions
             texture.Apply();
         }
 
+        Color SaturateColor(Color color) => new Color(Mathf.Clamp01(color.r), Mathf.Clamp01(color.g), Mathf.Clamp01(color.b), Mathf.Clamp01(color.a));
+
         [ContextMenu("Bake Volume")]
         public void BakeVolume()
         {
@@ -168,11 +267,27 @@ namespace UnityEngine.Rendering.Universal.Additions
             Texture3D texture = new Texture3D(bufferWidth, bufferHeight, bufferDepth, TextureFormat.RGBAHalf, false);
             texture.name = "BakedVolumeResult";
 
-            //if (passFlags.HasFlag(PassFlags.Direct))
-            //    BakeDirect(ref texture);
+            for (int x = 0; x < bufferWidth; x++)
+                for (int y = 0; y < bufferHeight; y++)
+                    for (int z = 0; z < bufferDepth; z++)
+                        texture.SetPixel(x, y, z, new Color(0, 0, 0, 1));
+
+            texture.Apply();
 
             if (passFlags.HasFlag(PassFlags.Indirect))
                 BakeIndirect(ref texture);
+
+            if (passFlags.HasFlag(PassFlags.Direct))
+                BakeDirect(ref texture);
+
+            /*
+            for (int x = 0; x < bufferWidth; x++)
+                for (int y = 0; y < bufferHeight; y++)
+                    for (int z = 0; z < bufferDepth; z++)
+                        texture.SetPixel(x, y, z, SaturateColor(texture.GetPixel(x, y, z)));
+
+            texture.Apply();
+            */
 
             buffer = texture;
         }
@@ -180,12 +295,13 @@ namespace UnityEngine.Rendering.Universal.Additions
 #if UNITY_EDITOR
         public void OnDrawGizmosSelected()
         {
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireCube(transform.TransformPoint(bounds.center), transform.TransformVector(bounds.size));
+            Gizmos.matrix = transform.localToWorldMatrix;
+            Gizmos.color = Color.blue;
+            Gizmos.DrawWireCube(bounds.center, bounds.size);
 
             Gizmos.color = Color.red;
             foreach (Vector3 direction in GetSampleDirections())
-                Gizmos.DrawRay(transform.position, direction);
+                Gizmos.DrawRay(bounds.center, direction);
         }
 #endif
     }

@@ -49,6 +49,13 @@ namespace UnityEngine.Rendering.Universal.Additions
             All = ~0
         }
 
+        public enum VolumeLightMode
+        {
+            Disabled,
+            Realtime,
+            Baked
+        }
+
         public override void Create()
         {
             fogPass = new RenderVolumetricsPass();

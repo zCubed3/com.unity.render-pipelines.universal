@@ -5,6 +5,7 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.Rendering.Universal.Additions;
 
 namespace UnityEditor.Rendering.Universal
 {
@@ -488,9 +489,8 @@ namespace UnityEditor.Rendering.Universal
         {
             using (var checkScope = new EditorGUI.ChangeCheckScope())
             {
-                EditorGUILayout.PropertyField(serializedLight.volumetricsEnabled);
-
-                using (new EditorGUI.DisabledScope(!serializedLight.volumetricsEnabled.boolValue))
+                EditorGUILayout.PropertyField(serializedLight.volumetricsLightMode);
+                using (new EditorGUI.DisabledScope((RenderVolumetrics.VolumeLightMode)serializedLight.volumetricsLightMode.enumValueIndex == RenderVolumetrics.VolumeLightMode.Disabled))
                 {
                     EditorGUILayout.PropertyField(serializedLight.volumetricsSyncIntensity);
 

@@ -29,12 +29,13 @@ namespace UnityEditor.Rendering.Universal
         public SerializedProperty shadowLayerMask { get; }
 
         // zCubed Additions
-        public SerializedProperty volumetricsEnabled { get; }
         public SerializedProperty volumetricsSyncIntensity { get; }
         public SerializedProperty volumetricsIntensity { get; }
         public SerializedProperty volumetricsPower { get; }
+        public SerializedProperty volumetricsLightMode { get; }
 
         public SerializedProperty specularRadius { get; }
+
         public SerializedProperty pcfRadius { get; }
         // ================
 
@@ -80,10 +81,10 @@ namespace UnityEditor.Rendering.Universal
             customShadowLayers = serializedAdditionalDataObject.FindProperty("m_CustomShadowLayers");
             shadowLayerMask = serializedAdditionalDataObject.FindProperty("m_ShadowLayerMask");
 
-            volumetricsEnabled = serializedAdditionalDataObject.FindProperty("m_VolumetricsEnabled");
             volumetricsSyncIntensity = serializedAdditionalDataObject.FindProperty("m_VolumetricsSyncIntensity");
             volumetricsIntensity = serializedAdditionalDataObject.FindProperty("m_VolumetricsIntensity");
             volumetricsPower = serializedAdditionalDataObject.FindProperty("m_VolumetricsPower");
+            volumetricsLightMode = serializedAdditionalDataObject.FindProperty("m_VolumetricsLightMode");
 
             specularRadius = serializedAdditionalDataObject.FindProperty("m_SpecularRadius");
 

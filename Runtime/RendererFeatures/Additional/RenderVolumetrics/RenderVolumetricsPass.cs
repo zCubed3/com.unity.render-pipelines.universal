@@ -267,7 +267,7 @@ namespace UnityEngine.Rendering.Universal.Additions
                 int mainLightIdx = renderingData.lightData.mainLightIndex;
                 if (mainLightIdx >= 0)
                 {
-                    skipMain = !renderingData.lightData.visibleLights[mainLightIdx].light.GetUniversalAdditionalLightData().volumetricsEnabled;
+                    skipMain = renderingData.lightData.visibleLights[mainLightIdx].light.GetUniversalAdditionalLightData().volumetricsLightMode != RenderVolumetrics.VolumeLightMode.Realtime;
                 }
 
                 if (mainLightIdx >= 0 && !skipMain)
@@ -308,7 +308,7 @@ namespace UnityEngine.Rendering.Universal.Additions
                         if (l < renderingData.lightData.visibleLights.Length)
                         {
                             lightData = renderingData.lightData.visibleLights[l].light.GetUniversalAdditionalLightData();
-                            dontContribute = !lightData.volumetricsEnabled;
+                            dontContribute = lightData.volumetricsLightMode != RenderVolumetrics.VolumeLightMode.Realtime;
                         }
 
                         if (!(l >= renderingData.lightData.visibleLights.Length || dontContribute))
@@ -343,20 +343,6 @@ namespace UnityEngine.Rendering.Universal.Additions
                 cmd.SetComputeVectorArrayParam(realtimeSamplerCS, Properties._AdditionalShadowParams, additionalLightPass.additionalLightIndexToShadowParams);
                 cmd.SetComputeMatrixArrayParam(realtimeSamplerCS, Properties._AdditionalLightsWorldToShadow, additionalLightPass.additionalLightShadowSliceIndexTo_WorldShadowMatrix);
                 cmd.SetComputeVectorArrayParam(realtimeSamplerCS, Properties._AdditionalLightsFogParams, additionalLightsFogParams);
-
-                //
-                // Light cookies
-                //
-                if (renderingData.cameraData.renderer is UniversalRenderer urp)
-                {
-                    if (urp.lightCookieManager != null)
-                    {
-                        if (urp.lightCookieManager.additionalLightCookieAtlas != null)
-                        {
-                            cmd.SetComputeTextureParam(realtimeSamplerCS, realtimeKernel, "_A", urp.lightCookieManager.additionalLightCookieAtlas.AtlasTexture);
-                        }
-                    }
-                }
 
                 cmd.SetComputeMatrixArrayParam(realtimeSamplerCS, Properties._CameraToWorld, cameraToWorld);
                 cmd.SetComputeMatrixArrayParam(realtimeSamplerCS, Properties._WorldToCamera, worldToCamera);

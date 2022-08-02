@@ -1,5 +1,7 @@
 using System;
 
+using UnityEngine.Rendering.Universal.Additions;
+
 namespace UnityEngine.Rendering.Universal
 {
     /// <summary>Light Layers.</summary>
@@ -131,15 +133,8 @@ namespace UnityEngine.Rendering.Universal
             set => m_LightCookieOffset = value;
         }
 
-        // zCubed Additions
-        [Tooltip("Toggles whether or not this light is counted into a volumetric pass.")]
-        [SerializeField] bool m_VolumetricsEnabled = false;
-        public bool volumetricsEnabled
-        {
-            get => m_VolumetricsEnabled;
-            set => m_VolumetricsEnabled = value;
-        }
 
+        // zCubed Additions
         [Tooltip("Toggles whether the volumetric intensity of this light should match the light intensity.")]
         [SerializeField] bool m_VolumetricsSyncIntensity = true;
         public bool volumetricsSyncIntensity
@@ -164,6 +159,15 @@ namespace UnityEngine.Rendering.Universal
             set => m_VolumetricsPower = value;
         }
 
+        [Tooltip("Is this light realtime or baked.")]
+        [SerializeField] RenderVolumetrics.VolumeLightMode m_VolumetricsLightMode = RenderVolumetrics.VolumeLightMode.Disabled;
+        public RenderVolumetrics.VolumeLightMode volumetricsLightMode
+        {
+            get => m_VolumetricsLightMode;
+            set => m_VolumetricsLightMode = value;
+        }
+
+
         [Tooltip("How large the 'orb' of the light is.")]
         [SerializeField] [Min(0F)] float m_SpecularRadius = 0.0f;
         public float specularRadius
@@ -171,6 +175,7 @@ namespace UnityEngine.Rendering.Universal
             get => m_SpecularRadius;
             set => m_SpecularRadius = value;
         }
+
 
         [Tooltip("How much we scatter the samples of shadows from this light.")]
         [SerializeField] [Min(0F)] float m_PCFRadius = 2.0f;
