@@ -1,0 +1,89 @@
+#pragma kernel CSMain
+
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+//
+// URP Only!
+//
+CBUFFER_START(VOLUMETRICS_CAMERA_DATA)
+
+float4x4 _CameraToWorld[2];
+float4x4 _WorldToCamera[2];
+float4x4 _Projection[2];
+float4x4 _InverseProjection[2];
+
+CBUFFER_END
+
+struct Ray
+{
+    float3 origin;
+    float3 direction;
+};
+
+Ray RayFromViewpoint(float2 vPoint, float4x4 cam2World, float4x4 invProj)
+{
+    Ray ray;
+
+    ray.origin = mul(cam2World, float4(0, 0, 0, 1)).xyz;
+
+    ray.direction = mul(invProj, float4(vPoint, 0, 1)).xyz;
+    ray.direction = mul(cam2World, float4(ray.direction, 0)).xyz;
+    ray.direction = normalize(ray.direction);
+
+    return ray;
+}
+
+//
+// Fog Inputs
+//
+Texture3D<float4> _MainTex;
+RWTexture3D<float4> _Result;
+
+float4 _PassData; // xyz = Texture Dimensions
+float4 _FogParams; // x = Steps, y = Far, z = Density, w = Scattering
+
+float4x4 _BakeMatrixInverse;
+float4 _BakeOrigin;
+float4 _BakeExtents;
+
+SamplerState sampler_LinearRepeat;
+
+bool IsPointWithinBox(float3 location)
+{
+    float3 boxPoint = mul(_BakeMatrixInverse, float4(location, 1)).xyz;
+    
+    float3 maxPoint = (_BakeOrigin + _BakeExtents).xyz;
+    float3 minPoint = (_BakeOrigin - _BakeExtents).xyz;
+    
+    return all(boxPoint <= maxPoint) && all(boxPoint >= minPoint);
+}
+
+float3 AdjustPointWithinBox(float3 location)
+{
+    return (mul(_BakeMatrixInverse, float4(location, 1)).xyz / _BakeExtents.xyz / 2) + 0.5;
+}
+
+[numthreads(8, 8, 8)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    float2 uv = id.xy / _PassData.xy;
+    float slice = id.z / _PassData.z;
+
+    float2 coords = (uv - 0.5) * 2.0;
+
+    Ray sRay = RayFromViewpoint(coords, _CameraToWorld[_PassData.w], _InverseProjection[_PassData.w]);
+
+    float3 sStart = sRay.origin;
+    float3 sEnd = sStart + sRay.direction * _FogParams.y;
+    float3 sDir = sRay.direction;
+
+    float3 sPoint = lerp(sStart, sEnd, slice * slice);
+
+    float3 sampled = 0;
+
+    [branch]
+    if (IsPointWithinBox(sPoint))
+        sampled = _MainTex.SampleLevel(sampler_LinearRepeat, AdjustPointWithinBox(sPoint), 0).rgb * _FogParams.z;
+
+    _Result[id.xyz] += float4(sampled, 1);
+}

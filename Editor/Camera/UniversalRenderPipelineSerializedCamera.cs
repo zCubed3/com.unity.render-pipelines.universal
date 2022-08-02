@@ -45,6 +45,7 @@ namespace UnityEditor.Rendering.Universal
         public SerializedProperty volumetricsDensity;
         public SerializedProperty volumetricsScattering;
         public SerializedProperty volumetricsQuality;
+        public SerializedProperty volumetricsRenderFlags;
         // ================
 
         public (Camera camera, UniversalRenderPipelineSerializedCamera serializedCamera) this[int index]
@@ -115,9 +116,8 @@ namespace UnityEditor.Rendering.Universal
             volumetricsSlices = serializedAdditionalDataObject.FindProperty("m_VolumetricsSlices");
             volumetricsSteps = serializedAdditionalDataObject.FindProperty("m_VolumetricsSteps");
             volumetricsFar = serializedAdditionalDataObject.FindProperty("m_VolumetricsFar");
-            volumetricsDensity = serializedAdditionalDataObject.FindProperty("m_VolumetricsDensity");
-            volumetricsScattering = serializedAdditionalDataObject.FindProperty("m_VolumetricsScattering");
             volumetricsQuality = serializedAdditionalDataObject.FindProperty("m_VolumetricsQuality");
+            volumetricsRenderFlags = serializedAdditionalDataObject.FindProperty("m_VolumetricsRenderFlags");
         }
 
         /// <summary>

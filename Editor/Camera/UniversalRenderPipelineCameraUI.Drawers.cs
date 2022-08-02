@@ -121,6 +121,7 @@ namespace UnityEditor.Rendering.Universal
             public static GUIContent VolumetricsFar = new GUIContent("Far", "How far should volumetrics be rendered out in front of the view?");
             public static GUIContent VolumetricsDensity = new GUIContent("Density", "How dense is the fog? (color * density)");
             public static GUIContent VolumetricsScattering = new GUIContent("Scattering", "What scattering factor should be used? (changes behavior of looking at lights)");
+            public static GUIContent VolumetricsRenderFlags = new GUIContent("Render Flags", "What types of fog should we render? (Baked / Realtime / Both?)");
         }
 
         static void DrawVolumetricsContent(UniversalRenderPipelineSerializedCamera p, Editor owner)
@@ -135,13 +136,15 @@ namespace UnityEditor.Rendering.Universal
                 EditorGUILayout.Slider(p.volumetricsPercent, 0, 1, VolumetricsStyles.VolumetricsPercent);
                 EditorGUILayout.Space();
 
-                EditorGUILayout.LabelField($"Quality = Fog Buffer Quality (32 / 64 / 96 / 128)");
+                EditorGUILayout.LabelField($"Quality: (16 / 32 / 64 / 96 / 128 / 256)");
                 EditorGUILayout.PropertyField(p.volumetricsQuality, VolumetricsStyles.VolumetricsQuality);
                 EditorGUILayout.Space();
 
+                EditorGUILayout.LabelField($"Render Flags: What fog types to render?");
+                EditorGUILayout.PropertyField(p.volumetricsRenderFlags, VolumetricsStyles.VolumetricsRenderFlags);
+                EditorGUILayout.Space();
+
                 EditorGUILayout.PropertyField(p.volumetricsFar, VolumetricsStyles.VolumetricsFar);
-                EditorGUILayout.PropertyField(p.volumetricsDensity, VolumetricsStyles.VolumetricsDensity);
-                EditorGUILayout.Slider(p.volumetricsScattering, 0, 1, VolumetricsStyles.VolumetricsScattering);
             }
 
             if (EditorGUI.EndChangeCheck())

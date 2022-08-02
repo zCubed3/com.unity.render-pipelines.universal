@@ -2,14 +2,17 @@ using UnityEngine.Rendering.Universal;
 
 namespace UnityEngine.Rendering.Universal.Additions
 {
-    public class RealtimeVolumetrics : ScriptableRendererFeature
+    public class RenderVolumetrics : ScriptableRendererFeature
     {
         [System.Serializable]
         public class Settings
         {
             [Header("If you're looking for other settings, they're on the lights and cameras!")]
-            [Tooltip("If this is set, we use a different sampling shader")]
-            public ComputeShader samplerCS;
+            [Tooltip("If this is set, we use a different sampling shader for baked lighting")]
+            public ComputeShader bakedSamplerCS;
+
+            [Tooltip("If this is set, we use a different sampling shader for realtime lighting")]
+            public ComputeShader realtimeSamplerCS;
 
             [Tooltip("If this is set, we use a different compositing shader")]
             public ComputeShader compositorCS;
@@ -24,18 +27,31 @@ namespace UnityEngine.Rendering.Universal.Additions
         [Header("EXPERIMENTAL and WIP!")]
         public Settings settings;
 
-        RealtimeVolumetricsPass fogPass;
+        RenderVolumetricsPass fogPass;
 
         public enum BufferQuality : int {
-            Low     = 32,
-            Medium  = 64,
-            High    = 96,
-            Ultra   = 128
+            VeryLow     = 16,
+            Low         = 32,
+            Medium      = 64,
+            High        = 96,
+            Ultra       = 128,
+            Overkill    = 256,
+        }
+
+        [System.Flags]
+        public enum RenderFlags
+        {
+            None = 0,
+
+            Realtime = 1,
+            Baked = 2,
+
+            All = ~0
         }
 
         public override void Create()
         {
-            fogPass = new RealtimeVolumetricsPass();
+            fogPass = new RenderVolumetricsPass();
             fogPass.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
         }
 
@@ -47,11 +63,18 @@ namespace UnityEngine.Rendering.Universal.Additions
                 return;
 
 
-            if (fogPass.samplerCS == null)
-                fogPass.samplerCS = settings.samplerCS == null ? Resources.Load<ComputeShader>("VolumetricSampler") : settings.samplerCS;
+            if (fogPass.realtimeSamplerCS == null)
+                fogPass.realtimeSamplerCS = settings.realtimeSamplerCS == null ? Resources.Load<ComputeShader>("RealtimeVolumetricSampler") : settings.realtimeSamplerCS;
 
-            if (fogPass.samplerCS == null)
-                Debug.LogError("Please assign a compute shader to the Volumetric Pass!");
+            if (fogPass.realtimeSamplerCS == null)
+                Debug.LogError("Please assign a realtime sampler compute shader to the Volumetric Pass!");
+
+
+            if (fogPass.bakedSamplerCS == null)
+                fogPass.bakedSamplerCS = settings.bakedSamplerCS == null ? Resources.Load<ComputeShader>("BakedVolumetricSampler") : settings.bakedSamplerCS;
+
+            if (fogPass.bakedSamplerCS == null)
+                Debug.LogError("Please assign a baked sampler compute shader to the Volumetric Pass!");
 
 
             if (fogPass.compositorCS == null)
@@ -74,7 +97,14 @@ namespace UnityEngine.Rendering.Universal.Additions
             if (fogPass.noisePattern == null)
                 Debug.LogError("Please assign a noise pattern to the Volumetric Pass!");
 
+
+            var stack = VolumeManager.instance.stack;
+            var volumetricsProfile = stack.GetComponent<RenderVolumetricsProfile>();
+
+
             fogPass.settings = settings;
+            fogPass.profile = volumetricsProfile;
+
             renderer.EnqueuePass(fogPass);
         }
     }

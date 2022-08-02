@@ -222,5 +222,5 @@ void CSMain(uint3 id : SV_DispatchThreadID)
         sampled += _AdditionalLightsColor[l].xyz * _FogParams.z * fac;
     }
 
-    _Result[id.xyz] = float4(sampled, 1);
+    _Result[id.xyz] += float4(sampled, 1);
 }

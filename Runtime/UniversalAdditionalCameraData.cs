@@ -613,25 +613,18 @@ namespace UnityEngine.Rendering.Universal
             set => m_VolumetricsFar = value;
         }
 
-        [SerializeField] float m_VolumetricsDensity = 1.0f;
-        public float volumetricsDensity
-        {
-            get => m_VolumetricsDensity;
-            set => m_VolumetricsDensity = value;
-        }
-
-        [SerializeField] float m_VolumetricsScattering = 0.5f;
-        public float volumetricsScattering
-        {
-            get => m_VolumetricsScattering;
-            set => m_VolumetricsScattering = value;
-        }
-
-        [SerializeField] Additions.RealtimeVolumetrics.BufferQuality m_VolumetricsQuality = Additions.RealtimeVolumetrics.BufferQuality.Medium;
-        public Additions.RealtimeVolumetrics.BufferQuality volumetricsQuality
+        [SerializeField] Additions.RenderVolumetrics.BufferQuality m_VolumetricsQuality = Additions.RenderVolumetrics.BufferQuality.Medium;
+        public Additions.RenderVolumetrics.BufferQuality volumetricsQuality
         {
             get => m_VolumetricsQuality;
             set => m_VolumetricsQuality = value;
+        }
+
+        [SerializeField] Additions.RenderVolumetrics.RenderFlags m_VolumetricsRenderFlags = Additions.RenderVolumetrics.RenderFlags.All;
+        public Additions.RenderVolumetrics.RenderFlags volumetricsRenderFlags
+        {
+            get => m_VolumetricsRenderFlags;
+            set => m_VolumetricsRenderFlags = value;
         }
         // ================
 
