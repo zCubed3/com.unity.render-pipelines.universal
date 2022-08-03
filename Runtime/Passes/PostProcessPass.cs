@@ -1314,6 +1314,12 @@ namespace UnityEngine.Rendering.Universal.Internal
         {
             material.SetFloat(ShaderConstants._Chroma_Params, m_ChromaticAberration.intensity.value * 0.05f);
 
+            // zCubed Additions
+            material.SetVector(ShaderConstants._ChromaRed, m_ChromaticAberration.chromaRed.value);
+            material.SetVector(ShaderConstants._ChromaGreen, m_ChromaticAberration.chromaGreen.value);
+            material.SetVector(ShaderConstants._ChromaBlue, m_ChromaticAberration.chromaBlue.value);
+            // ================
+
             if (m_ChromaticAberration.IsActive())
                 material.EnableKeyword(ShaderKeywordStrings.ChromaticAberration);
         }
@@ -1749,6 +1755,12 @@ namespace UnityEngine.Rendering.Universal.Internal
 
             public static readonly int _ScalingSetupTexture = Shader.PropertyToID("_ScalingSetupTexture");
             public static readonly int _UpscaledTexture = Shader.PropertyToID("_UpscaledTexture");
+
+            // zCubed Additions
+            public static readonly int _ChromaRed = Shader.PropertyToID("_ChromaRed");
+            public static readonly int _ChromaGreen = Shader.PropertyToID("_ChromaGreen");
+            public static readonly int _ChromaBlue = Shader.PropertyToID("_ChromaBlue");
+            // ================
 
             public static int[] _BloomMipUp;
             public static int[] _BloomMipDown;
